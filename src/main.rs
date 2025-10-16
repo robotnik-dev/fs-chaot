@@ -11,7 +11,12 @@ fn main() {
 #[component]
 fn App() -> Element {
     rsx! {
-        "Hello world"
-
+        div {
+            class: "bg-red-100",
+            button {
+                onclick: move |_| info!("Clicked"),
+                "Click me",
+            }
+        }
     }
 }
