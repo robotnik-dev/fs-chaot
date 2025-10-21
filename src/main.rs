@@ -9,13 +9,17 @@ use crate::{
 mod backend;
 mod card;
 mod components;
+mod csv_record;
+mod pokeapi;
 
 pub const BASE_URL: &str = "https://pokeapi.co/api/v2/pokemon/";
 pub const LANGUAGE_URL: &str = "https://raw.githubusercontent.com/PokeAPI/pokeapi/refs/heads/master/data/v2/csv/pokemon_species_names.csv";
+pub const SPRITE_URL: &str =
+    "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/";
 pub const CARDS_PER_BOOK: usize = 576;
 pub const CARDS_PER_PAGE: usize = 24;
-static MAIN_CSS: Asset = asset!("/assets/main.css");
-static COMPONENTS_CSS: Asset = asset!("/assets/dx-components-theme.css");
+static STYLE: Asset = asset!("/assets/style.css");
+static THEME: Asset = asset!("/assets/dx-components-theme.css");
 
 fn main() {
     dioxus::launch(App);
@@ -24,9 +28,9 @@ fn main() {
 #[component]
 fn App() -> Element {
     rsx! {
-        document::Stylesheet { href: MAIN_CSS }
-        document::Stylesheet { href: COMPONENTS_CSS }
-        Title {}
+        document::Stylesheet { href: STYLE }
+        document::Stylesheet { href: THEME }
+        // Title {}
         SearchBar {}
     }
 }
@@ -53,7 +57,7 @@ fn SearchBar() -> Element {
                 r#type: "text",
                 autofocus: true,
                 name: "text",
-                id: "input",
+                class: "input",
                 placeholder: "Name or ID",
                 oninput: move |event| search.set(event.value().clone()),
                 onkeypress: move |event: Event<KeyboardData>| async move {
