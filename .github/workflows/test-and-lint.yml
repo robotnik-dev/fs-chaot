@@ -23,7 +23,7 @@ jobs:
       - name: cargo test
         run: |
           sudo apt update &&
-          sudo apt install pkg-config libssl-dev &&
+          sudo apt install pkg-config libssl-dev libgtk3.0-dev &&
           cargo test --all-features --all-targets --release
 
   lint:
