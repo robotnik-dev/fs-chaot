@@ -1,4 +1,7 @@
-use dioxus::{logger::tracing::info, prelude::*};
+use std::collections::HashMap;
+
+use dioxus::prelude::*;
+use itertools::Itertools;
 
 use crate::{
     backend::get_card,
@@ -25,34 +28,36 @@ fn main() {
     dioxus::launch(App);
 }
 
+static CARDS: GlobalSignal<HashMap<usize, Card>> = Signal::global(HashMap::new);
+
 #[component]
 fn App() -> Element {
     rsx! {
         document::Stylesheet { href: STYLE }
         document::Stylesheet { href: THEME }
-        // Title {}
+        Title {}
         SearchBar {}
+        CardContainer {}
     }
 }
 
 #[component]
 fn Title() -> Element {
     rsx! {
-        div { id: "title",
-            h1 { "Chaot" }
+        div { class: "title",
+            h1 { "C.h.a.o.t" }
         }
     }
 }
 
 #[component]
 fn SearchBar() -> Element {
-    let mut current_card: Signal<Option<Card>> = use_signal(|| None);
     let mut search = use_signal(|| "".to_string());
     let mut open = use_signal(|| false);
     let mut error_message = use_signal(|| "".to_string());
 
     rsx! {
-        div { id: "input-group",
+        div { class: "input-group",
             input {
                 r#type: "text",
                 autofocus: true,
@@ -64,13 +69,16 @@ fn SearchBar() -> Element {
                     if event.key() == Key::Enter {
                         let name_or_id = search.peek().to_string();
                         match get_card(name_or_id).await {
-                            Ok(card) => current_card.set(Some(card)),
+                            Ok(card) => {
+                                let mut cards = CARDS.read().clone();
+                                cards.insert(card.index.0, card);
+                                // *CARDS.write() = cards;
+                            }
                             Err(err) => {
                                 error_message.set(err.to_string());
                                 open.set(true);
                             }
                         }
-                        info!("{:?}", current_card);
                     }
                 },
             }
@@ -86,6 +94,61 @@ fn SearchBar() -> Element {
                     }
                     DialogTitle { "Error" }
                     DialogDescription { {error_message.read().to_string()} }
+                }
+            }
+        }
+    }
+}
+
+#[component]
+fn CardContainer() -> Element {
+    let cards = CARDS.read().clone();
+    rsx! {
+        div { class: "card-container",
+            {
+                cards
+                    .iter()
+                    .sorted_by_key(|(index, _)| **index)
+                    .map(|(_, card)| rsx! {
+                        CardView { card: card.clone() }
+                    })
+            }
+        }
+    }
+}
+
+#[component]
+fn CardView(card: Card) -> Element {
+    rsx! {
+        div { class: "card",
+            div { class: "card-title", "{card.name_de}" }
+            div { class: "card-image",
+                img { src: "{card.img_url}" }
+            }
+            div { class: "card-info",
+                div { class: "card-row",
+                    span { class: "card-label", "Index:" }
+                    span { class: "card-value", "{card.index}" }
+                }
+                div { class: "card-row",
+                    span { class: "card-label", "Name (EN):" }
+                    span { class: "card-value", "{card.name_en}" }
+                }
+                div { class: "card-row",
+                    span { class: "card-label", "Book:" }
+                    span { class: "card-value", "{card.book}" }
+                }
+                div { class: "card-row",
+                    span { class: "card-label", "Page:" }
+                    span { class: "card-value", "{card.page}" }
+                }
+                div { class: "card-row",
+                    span { class: "card-label", "Side:" }
+                    span { class: "card-value", "{card.side}" }
+                }
+                div { class: "card-row",
+                    span { class: "card-label", "Entry:" }
+                    span { class: "card-value", "{card.entry}" }
                 }
             }
         }

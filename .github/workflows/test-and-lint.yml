@@ -1,0 +1,42 @@
+name: test and lint
+
+on: pull_request
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-Dwarnings"
+  SCCACHE_GHA_ENABLED: "true"
+  RUSTC_WRAPPER: "sccache"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Run sccache-cache
+        uses: mozilla-actions/sccache-action@v0.0.9
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - name: cargo test
+        run: cargo test --all-features --all-targets --release
+
+  lint:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        plattform: [web, desktop] # TODO: android
+    steps:
+      - uses: actions/checkout@v5
+      - name: Run sccache-cache
+        uses: mozilla-actions/sccache-action@v0.0.9
+      - uses: cargo-bins/cargo-binstall@main
+      - name: Dioxus check
+        run: "
+          sudo apt update &&
+          sudo apt install pkg-config libssl-dev &&
+          cargo binstall dioxus-cli@0.7.0-rc.3 -y &&
+          dx check --fullstack --release --all-features --locked --${{ matrix.plattform }}
+          "

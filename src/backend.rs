@@ -15,6 +15,6 @@ pub async fn get_card(name_or_id: String) -> Result<Card, ServerFnError> {
             }),
         }
     } else {
-        Ok(Card::try_from_name(Name::from(name_or_id.as_str())).await?)
+        Ok(Card::try_from_name(Name::new(name_or_id.as_str())).await?)
     }
 }
