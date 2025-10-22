@@ -1,9 +1,8 @@
+use crate::card::{Card, Index, Name};
 use anyhow::Result;
 use dioxus::prelude::*;
 #[cfg(feature = "server")]
 use rusqlite::params;
-
-use crate::card::{Card, Index, Name};
 
 #[cfg(feature = "server")]
 thread_local! {
@@ -45,25 +44,28 @@ pub async fn get_card_remote(name_or_id: String) -> Result<Card, ServerFnError> 
 }
 
 #[server]
-pub async fn get_cards_db() -> Result<Vec<Card>> {
+pub async fn get_cards_db() -> Result<Vec<(usize, Card)>> {
     DB.with(|db| {
         Ok(db
             .prepare(
                 "SELECT id, name_en, name_de, book, page, side, entry, img_url FROM searched_cards",
             )?
             .query_map([], |row| {
-                Ok(Card {
-                    index: row.get(0)?,
-                    name_en: row.get(1)?,
-                    name_de: row.get(2)?,
-                    book: row.get(3)?,
-                    page: row.get(4)?,
-                    side: row.get(5)?,
-                    entry: row.get(6)?,
-                    img_url: row.get(7)?,
-                })
+                Ok((
+                    row.get(0)?,
+                    Card {
+                        index: row.get(0)?,
+                        name_en: row.get(1)?,
+                        name_de: row.get(2)?,
+                        book: row.get(3)?,
+                        page: row.get(4)?,
+                        side: row.get(5)?,
+                        entry: row.get(6)?,
+                        img_url: row.get(7)?,
+                    },
+                ))
             })?
-            .collect::<Result<Vec<Card>, rusqlite::Error>>()?)
+            .collect::<Result<Vec<(usize, Card)>, rusqlite::Error>>()?)
     })
 }
 

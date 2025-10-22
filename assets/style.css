@@ -5,15 +5,20 @@
   box-sizing: border-box;
 }
 
-/* Title */
-.title {
+/* Navbar*/
+.nav-bar{
   text-align: center;
   padding-top: 10px;
   border-bottom: 1px solid #a8a8a8;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  justify-content: center;
+  justify-content: space-evenly;
+}
+
+.nav-bar a {
+    text-decoration: none;
+    color: white;
 }
 
 /* Dialog Backdrop */

@@ -19,10 +19,6 @@ pub struct Card {
     pub img_url: String,
 }
 
-pub struct CardCollection<T> {
-    items: Vec<T>
-}
-
 impl Card {
     #[allow(dead_code)]
     pub fn new_debug() -> Self {
