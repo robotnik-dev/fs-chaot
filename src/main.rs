@@ -4,7 +4,7 @@ use dioxus::prelude::*;
 use itertools::Itertools;
 
 use crate::{
-    backend::get_card,
+    backend::{get_card_remote, save_searched_card_db},
     card::Card,
     components::dialog::{DialogContent, DialogDescription, DialogRoot, DialogTitle},
 };
@@ -68,11 +68,18 @@ fn SearchBar() -> Element {
                 onkeypress: move |event: Event<KeyboardData>| async move {
                     if event.key() == Key::Enter {
                         let name_or_id = search.peek().to_string();
-                        match get_card(name_or_id).await {
+                        // search in DB first before calling remote
+                        // TODO
+                        match get_card_remote(name_or_id).await {
                             Ok(card) => {
                                 let mut cards = CARDS.read().clone();
-                                cards.insert(card.index.0, card);
-                                // *CARDS.write() = cards;
+                                cards.insert(card.index.0, card.clone());
+                                *CARDS.write() = cards;
+                                // save card into DB for quicker search next time
+                                if let Err(err) = save_searched_card_db(card).await {
+                                    error_message.set(err.to_string());
+                                    open.set(true);
+                                }
                             }
                             Err(err) => {
                                 error_message.set(err.to_string());

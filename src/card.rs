@@ -1,8 +1,11 @@
-use std::fmt::Display;
-
-use anyhow::{anyhow, Result};
-
 use crate::{pokeapi::PokeApi, BASE_URL, CARDS_PER_BOOK, CARDS_PER_PAGE, LANGUAGE_URL, SPRITE_URL};
+use anyhow::{anyhow, Result};
+#[cfg(feature = "server")]
+use rusqlite::{
+    types::{FromSql, FromSqlResult, ToSqlOutput},
+    ToSql,
+};
+use std::fmt::Display;
 
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize, PartialEq)]
 pub struct Card {
@@ -14,6 +17,10 @@ pub struct Card {
     pub side: Side,
     pub entry: Entry,
     pub img_url: String,
+}
+
+pub struct CardCollection<T> {
+    items: Vec<T>
 }
 
 impl Card {
@@ -76,12 +83,44 @@ impl Display for Index {
     }
 }
 
+#[cfg(feature = "server")]
+impl ToSql for Index {
+    fn to_sql(&self) -> rusqlite::Result<rusqlite::types::ToSqlOutput<'_>> {
+        Ok(ToSqlOutput::Owned(rusqlite::types::Value::Integer(
+            self.0 as i64,
+        )))
+    }
+}
+
+#[cfg(feature = "server")]
+impl FromSql for Index {
+    fn column_result(value: rusqlite::types::ValueRef<'_>) -> rusqlite::types::FromSqlResult<Self> {
+        FromSqlResult::Ok(Index(value.as_i64()? as usize))
+    }
+}
+
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize, PartialEq)]
 pub struct Name(pub String);
 
 impl Display for Name {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(&self.0)
+    }
+}
+
+#[cfg(feature = "server")]
+impl ToSql for Name {
+    fn to_sql(&self) -> rusqlite::Result<rusqlite::types::ToSqlOutput<'_>> {
+        Ok(ToSqlOutput::Owned(rusqlite::types::Value::Text(
+            self.to_string(),
+        )))
+    }
+}
+
+#[cfg(feature = "server")]
+impl FromSql for Name {
+    fn column_result(value: rusqlite::types::ValueRef<'_>) -> rusqlite::types::FromSqlResult<Self> {
+        FromSqlResult::Ok(Name(value.as_str()?.to_string()))
     }
 }
 
@@ -93,6 +132,22 @@ impl Name {
 
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize, PartialEq)]
 pub struct Book(pub usize);
+
+#[cfg(feature = "server")]
+impl ToSql for Book {
+    fn to_sql(&self) -> rusqlite::Result<rusqlite::types::ToSqlOutput<'_>> {
+        Ok(ToSqlOutput::Owned(rusqlite::types::Value::Integer(
+            self.0 as i64,
+        )))
+    }
+}
+
+#[cfg(feature = "server")]
+impl FromSql for Book {
+    fn column_result(value: rusqlite::types::ValueRef<'_>) -> rusqlite::types::FromSqlResult<Self> {
+        FromSqlResult::Ok(Book(value.as_i64()? as usize))
+    }
+}
 
 impl Display for Book {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -112,6 +167,22 @@ pub struct Page(pub usize);
 impl Display for Page {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(self.0.to_string().as_str())
+    }
+}
+
+#[cfg(feature = "server")]
+impl ToSql for Page {
+    fn to_sql(&self) -> rusqlite::Result<rusqlite::types::ToSqlOutput<'_>> {
+        Ok(ToSqlOutput::Owned(rusqlite::types::Value::Integer(
+            self.0 as i64,
+        )))
+    }
+}
+
+#[cfg(feature = "server")]
+impl FromSql for Page {
+    fn column_result(value: rusqlite::types::ValueRef<'_>) -> rusqlite::types::FromSqlResult<Self> {
+        FromSqlResult::Ok(Page(value.as_i64()? as usize))
     }
 }
 
@@ -149,6 +220,32 @@ impl Display for Side {
     }
 }
 
+#[cfg(feature = "server")]
+impl ToSql for Side {
+    fn to_sql(&self) -> rusqlite::Result<rusqlite::types::ToSqlOutput<'_>> {
+        Ok(ToSqlOutput::Owned(rusqlite::types::Value::Text(
+            self.to_string(),
+        )))
+    }
+}
+
+#[cfg(feature = "server")]
+impl FromSql for Side {
+    fn column_result(value: rusqlite::types::ValueRef<'_>) -> rusqlite::types::FromSqlResult<Self> {
+        FromSqlResult::Ok(Side::from(value.as_str()?))
+    }
+}
+
+impl From<&str> for Side {
+    fn from(value: &str) -> Self {
+        if value == "A" {
+            Self::A
+        } else {
+            Self::B
+        }
+    }
+}
+
 impl From<&Index> for Side {
     fn from(value: &Index) -> Self {
         let rest = (value.0 as f32 / CARDS_PER_PAGE as f32).fract();
@@ -166,6 +263,22 @@ pub struct Entry(pub usize);
 impl Display for Entry {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(self.0.to_string().as_str())
+    }
+}
+
+#[cfg(feature = "server")]
+impl ToSql for Entry {
+    fn to_sql(&self) -> rusqlite::Result<rusqlite::types::ToSqlOutput<'_>> {
+        Ok(ToSqlOutput::Owned(rusqlite::types::Value::Integer(
+            self.0 as i64,
+        )))
+    }
+}
+
+#[cfg(feature = "server")]
+impl FromSql for Entry {
+    fn column_result(value: rusqlite::types::ValueRef<'_>) -> rusqlite::types::FromSqlResult<Self> {
+        FromSqlResult::Ok(Entry(value.as_i64()? as usize))
     }
 }
 
