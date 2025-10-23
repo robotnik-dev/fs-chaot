@@ -1,4 +1,5 @@
 [application]
+name = "fs-chaot"
 
 [web.app]
 

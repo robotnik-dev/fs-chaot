@@ -1,10 +1,6 @@
-use dioxus::{logger::tracing::info, prelude::*};
-
-use crate::{
-    backend::get_card,
-    card::Card,
-    components::dialog::{DialogContent, DialogDescription, DialogRoot, DialogTitle},
-};
+use crate::card::Card;
+use crate::components::*;
+use dioxus::prelude::*;
 
 mod backend;
 mod card;
@@ -20,74 +16,33 @@ pub const CARDS_PER_BOOK: usize = 576;
 pub const CARDS_PER_PAGE: usize = 24;
 static STYLE: Asset = asset!("/assets/style.css");
 static THEME: Asset = asset!("/assets/dx-components-theme.css");
+const FAVICON: Asset = asset!("/assets/favicon.ico");
+
+#[derive(Routable, Clone, PartialEq)]
+pub enum Route {
+    #[layout(NavBar)]
+    #[route("/")]
+    SearchView,
+
+    #[route("/history")]
+    History,
+}
 
 fn main() {
+    #[cfg(not(feature = "server"))]
+    dioxus::fullstack::set_server_url("https://fs-chaot.fly.dev");
+
     dioxus::launch(App);
 }
+
+static CARDS: GlobalSignal<Vec<(usize, Card)>> = Signal::global(Vec::new);
 
 #[component]
 fn App() -> Element {
     rsx! {
         document::Stylesheet { href: STYLE }
         document::Stylesheet { href: THEME }
-        // Title {}
-        SearchBar {}
-    }
-}
-
-#[component]
-fn Title() -> Element {
-    rsx! {
-        div { id: "title",
-            h1 { "Chaot" }
-        }
-    }
-}
-
-#[component]
-fn SearchBar() -> Element {
-    let mut current_card: Signal<Option<Card>> = use_signal(|| None);
-    let mut search = use_signal(|| "".to_string());
-    let mut open = use_signal(|| false);
-    let mut error_message = use_signal(|| "".to_string());
-
-    rsx! {
-        div { id: "input-group",
-            input {
-                r#type: "text",
-                autofocus: true,
-                name: "text",
-                class: "input",
-                placeholder: "Name or ID",
-                oninput: move |event| search.set(event.value().clone()),
-                onkeypress: move |event: Event<KeyboardData>| async move {
-                    if event.key() == Key::Enter {
-                        let name_or_id = search.peek().to_string();
-                        match get_card(name_or_id).await {
-                            Ok(card) => current_card.set(Some(card)),
-                            Err(err) => {
-                                error_message.set(err.to_string());
-                                open.set(true);
-                            }
-                        }
-                        info!("{:?}", current_card);
-                    }
-                },
-            }
-            DialogRoot { open: open(), on_open_change: move |v| open.set(v),
-                DialogContent {
-                    button {
-                        class: "dialog-close",
-                        r#type: "button",
-                        aria_label: "Close",
-                        tabindex: if open() { "0" } else { "-1" },
-                        onclick: move |_| open.set(false),
-                        "×"
-                    }
-                    DialogTitle { "Error" }
-                    DialogDescription { {error_message.read().to_string()} }
-                }
-            }
-        }
+        document::Link { rel: "icon", href: FAVICON }
+        Router::<Route> {}
     }
 }
