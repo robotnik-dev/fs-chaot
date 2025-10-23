@@ -7,7 +7,7 @@ use rusqlite::params;
 #[cfg(feature = "server")]
 thread_local! {
     static DB: std::sync::LazyLock<rusqlite::Connection> = std::sync::LazyLock::new(|| {
-        let conn = rusqlite::Connection::open("cards.db").expect("Failed to open database");
+        let conn = rusqlite::Connection::open("db/cards.db").expect("Failed to open database");
 
         conn.execute_batch(
             "CREATE TABLE IF NOT EXISTS searched_cards (
@@ -27,7 +27,7 @@ thread_local! {
     });
 }
 
-#[server]
+#[server(endpoint = "get_card_remote")]
 pub async fn get_card_remote(name_or_id: String) -> Result<Card, ServerFnError> {
     if let Ok(index) = name_or_id.parse::<usize>() {
         match Index::try_new(index) {
@@ -43,7 +43,7 @@ pub async fn get_card_remote(name_or_id: String) -> Result<Card, ServerFnError> 
     }
 }
 
-#[server]
+#[server(endpoint = "get_cards_db")]
 pub async fn get_cards_db() -> Result<Vec<(usize, Card)>> {
     DB.with(|db| {
         Ok(db
@@ -69,7 +69,7 @@ pub async fn get_cards_db() -> Result<Vec<(usize, Card)>> {
     })
 }
 
-#[server]
+#[server(endpoint = "save_searched_card_db")]
 pub async fn save_searched_card_db(card: Card) -> Result<(), ServerFnError> {
     DB.with(|f| {
         f.execute(

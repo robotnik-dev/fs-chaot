@@ -12,6 +12,7 @@ pub fn History() -> Element {
                     .cloned()
                     .iter()
                     .sorted_by_key(|(index, _)| index)
+                    .take(12) // TODO: only the latest 12 entries for now to avoid having all of them
                     .map(|(_, card)| rsx! {
                         CardView { card: card.clone() }
                     })
