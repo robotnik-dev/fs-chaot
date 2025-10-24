@@ -1,5 +1,4 @@
-use crate::card::Card;
-use crate::components::*;
+use crate::{card::Card, components::*};
 use dioxus::prelude::*;
 
 mod backend;
