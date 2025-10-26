@@ -303,6 +303,16 @@ impl Entry {
 #[derive(Default, Debug, Clone, serde::Deserialize, serde::Serialize, PartialEq)]
 pub struct Bool(pub bool);
 
+impl Display for Bool {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.0 {
+            f.write_str("Yes")
+        } else {
+            f.write_str("No")
+        }
+    }
+}
+
 #[cfg(feature = "server")]
 impl FromSql for Bool {
     fn column_result(value: rusqlite::types::ValueRef<'_>) -> rusqlite::types::FromSqlResult<Self> {
