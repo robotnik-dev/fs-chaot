@@ -34,6 +34,14 @@ pub fn CardView(card: Card) -> Element {
                     span { class: "card-label", "Entry:" }
                     span { class: "card-value", "{card.entry}" }
                 }
+                div { class: "card-row",
+                    span { class: "card-label", "Owned:" }
+                    span {
+                        class: "card-value",
+                        style: if card.owned.0 { "color:green" } else { "color:red" },
+                        "{card.owned}"
+                    }
+                }
             }
         }
     }

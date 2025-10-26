@@ -1,5 +1,8 @@
 use crate::{
-    backend::{get_card_remote, save_searched_card_db},
+    backend::{
+        get_card_by_id_db, get_card_by_id_remote, get_card_by_name_db, get_card_by_name_remote,
+        save_card_db,
+    },
     components::{DialogContent, DialogDescription, DialogRoot, DialogTitle},
     CARDS,
 };
@@ -23,15 +26,41 @@ pub fn SearchBar() -> Element {
                 onkeypress: move |event: Event<KeyboardData>| async move {
                     if event.key() == Key::Enter {
                         let name_or_id = search.peek().to_string();
-                        // search in DB first before calling remote
-                        // TODO
-                        match get_card_remote(name_or_id).await {
-                            Ok(card) => {
-                                let mut cards = CARDS.read().clone();
-                                cards.push((card.index.0, card.clone()));
+                        if name_or_id.is_empty() {
+                            // search in DB to display the card and dont put duplicates in there
+                            // check if this card is already displayed
+                            // display card from db and return early
+                            return;
+                        }
+
+                        let maybe_card_db = {
+                            if let Ok(id) = name_or_id.parse::<usize>() {
+                                get_card_by_id_db(id).await
+                            } else {
+                                get_card_by_name_db(name_or_id.clone()).await
+                            }
+                        };
+                        if let Ok(card_db) = maybe_card_db {
+                            let mut cards = CARDS.read().clone();
+                            if !cards.contains(&(card_db.index.0, card_db.clone())) {
+                                cards.push((card_db.index.0, card_db.clone()));
                                 *CARDS.write() = cards;
-                                // save card into DB for quicker search next time
-                                if let Err(err) = save_searched_card_db(card).await {
+                            }
+                            return;
+                        }
+                        let maybe_card_remote = {
+                            if let Ok(id) = name_or_id.parse::<usize>() {
+                                get_card_by_id_remote(id).await
+                            } else {
+                                get_card_by_name_remote(name_or_id.clone()).await
+                            }
+                        };
+                        match maybe_card_remote {
+                            Ok(card_remote) => {
+                                let mut cards = CARDS.read().clone();
+                                cards.push((card_remote.index.0, card_remote.clone()));
+                                *CARDS.write() = cards;
+                                if let Err(err) = save_card_db(card_remote).await {
                                     error_message.set(err.to_string());
                                     open.set(true);
                                 }
