@@ -1,5 +1,5 @@
 use crate::{
-    backend::{get_card_remote, save_searched_card_db},
+    backend::{get_card_remote, save_card_db},
     components::{DialogContent, DialogDescription, DialogRoot, DialogTitle},
     CARDS,
 };
@@ -31,7 +31,7 @@ pub fn SearchBar() -> Element {
                                 cards.push((card.index.0, card.clone()));
                                 *CARDS.write() = cards;
                                 // save card into DB for quicker search next time
-                                if let Err(err) = save_searched_card_db(card).await {
+                                if let Err(err) = save_card_db(card).await {
                                     error_message.set(err.to_string());
                                     open.set(true);
                                 }

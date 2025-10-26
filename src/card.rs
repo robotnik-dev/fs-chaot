@@ -7,7 +7,7 @@ use rusqlite::{
 };
 use std::fmt::Display;
 
-#[derive(Debug, Clone, serde::Deserialize, serde::Serialize, PartialEq)]
+#[derive(Default, Debug, Clone, serde::Deserialize, serde::Serialize, PartialEq)]
 pub struct Card {
     pub index: Index,
     pub name_en: Name,
@@ -17,6 +17,7 @@ pub struct Card {
     pub side: Side,
     pub entry: Entry,
     pub img_url: String,
+    pub owned: Bool,
 }
 
 impl Card {
@@ -31,6 +32,7 @@ impl Card {
             side: Side::A,
             entry: Entry(1),
             img_url: format!("{SPRITE_URL}1.png"),
+            ..Default::default()
         }
     }
     pub async fn try_from_index(index: Index) -> Result<Self> {
@@ -51,6 +53,7 @@ impl Card {
             side,
             entry,
             img_url,
+            ..Default::default()
         })
     }
 
@@ -60,7 +63,8 @@ impl Card {
         Card::try_from_index(index).await
     }
 }
-#[derive(Debug, Clone, serde::Deserialize, serde::Serialize, PartialEq)]
+
+#[derive(Default, Debug, Clone, serde::Deserialize, serde::Serialize, PartialEq)]
 pub struct Index(pub usize);
 
 impl Index {
@@ -95,7 +99,7 @@ impl FromSql for Index {
     }
 }
 
-#[derive(Debug, Clone, serde::Deserialize, serde::Serialize, PartialEq)]
+#[derive(Default, Debug, Clone, serde::Deserialize, serde::Serialize, PartialEq)]
 pub struct Name(pub String);
 
 impl Display for Name {
@@ -126,7 +130,7 @@ impl Name {
     }
 }
 
-#[derive(Debug, Clone, serde::Deserialize, serde::Serialize, PartialEq)]
+#[derive(Default, Debug, Clone, serde::Deserialize, serde::Serialize, PartialEq)]
 pub struct Book(pub usize);
 
 #[cfg(feature = "server")]
@@ -157,7 +161,7 @@ impl From<&Index> for Book {
     }
 }
 
-#[derive(Debug, Clone, serde::Deserialize, serde::Serialize, PartialEq)]
+#[derive(Default, Debug, Clone, serde::Deserialize, serde::Serialize, PartialEq)]
 pub struct Page(pub usize);
 
 impl Display for Page {
@@ -201,8 +205,9 @@ impl Page {
     }
 }
 
-#[derive(Debug, Clone, serde::Deserialize, serde::Serialize, PartialEq)]
+#[derive(Default, Debug, Clone, serde::Deserialize, serde::Serialize, PartialEq)]
 pub enum Side {
+    #[default]
     A,
     B,
 }
@@ -253,7 +258,7 @@ impl From<&Index> for Side {
     }
 }
 
-#[derive(Debug, Clone, serde::Deserialize, serde::Serialize, PartialEq)]
+#[derive(Default, Debug, Clone, serde::Deserialize, serde::Serialize, PartialEq)]
 pub struct Entry(pub usize);
 
 impl Display for Entry {
@@ -292,5 +297,31 @@ impl Entry {
             }
             Side::B => Self(index.0 - midpoint),
         }
+    }
+}
+
+#[derive(Default, Debug, Clone, serde::Deserialize, serde::Serialize, PartialEq)]
+pub struct Bool(pub bool);
+
+#[cfg(feature = "server")]
+impl FromSql for Bool {
+    fn column_result(value: rusqlite::types::ValueRef<'_>) -> rusqlite::types::FromSqlResult<Self> {
+        use rusqlite::types::FromSqlError;
+
+        let as_int = value.as_i64()?;
+        match as_int {
+            0 => Ok(Bool(false)),
+            1 => Ok(Bool(true)),
+            _ => Err(FromSqlError::InvalidType),
+        }
+    }
+}
+
+#[cfg(feature = "server")]
+impl ToSql for Bool {
+    fn to_sql(&self) -> rusqlite::Result<rusqlite::types::ToSqlOutput<'_>> {
+        Ok(ToSqlOutput::Owned(rusqlite::types::Value::Integer(
+            if self.0 { 1 } else { 0 },
+        )))
     }
 }

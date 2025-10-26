@@ -7,10 +7,10 @@ use rusqlite::params;
 #[cfg(feature = "server")]
 thread_local! {
     static DB: std::sync::LazyLock<rusqlite::Connection> = std::sync::LazyLock::new(|| {
-        let conn = rusqlite::Connection::open("db/cards.db").expect("Failed to open database");
+        let conn = rusqlite::Connection::open("production.db").expect("Failed to open database");
 
         conn.execute_batch(
-            "CREATE TABLE IF NOT EXISTS searched_cards (
+            "CREATE TABLE IF NOT EXISTS cards (
                 id INTEGER PRIMARY KEY,
                 name_en TEXT NOT NULL,
                 name_de TEXT NOT NULL,
@@ -18,7 +18,9 @@ thread_local! {
                 page INTEGER NOT NULL,
                 side TEXT NOT NULL,
                 entry INTEGER NOT NULL,
-                img_url TEXT NOT NULL
+                img_url TEXT NOT NULL,
+                owned BOOLEAN NOT NULL CHECK (owned IN (0,1)),
+                created_at DATETIME DEFAULT (datetime('now', 'localtime'))
             );",
         )
         .expect("failed to create database table");
@@ -48,7 +50,7 @@ pub async fn get_cards_db() -> Result<Vec<(usize, Card)>> {
     DB.with(|db| {
         Ok(db
             .prepare(
-                "SELECT id, name_en, name_de, book, page, side, entry, img_url FROM searched_cards",
+                "SELECT id, name_en, name_de, book, page, side, entry, img_url, owned FROM cards",
             )?
             .query_map([], |row| {
                 Ok((
@@ -62,6 +64,7 @@ pub async fn get_cards_db() -> Result<Vec<(usize, Card)>> {
                         side: row.get(5)?,
                         entry: row.get(6)?,
                         img_url: row.get(7)?,
+                        owned: row.get(8)?,
                     },
                 ))
             })?
@@ -69,12 +72,12 @@ pub async fn get_cards_db() -> Result<Vec<(usize, Card)>> {
     })
 }
 
-#[server(endpoint = "save_searched_card_db")]
-pub async fn save_searched_card_db(card: Card) -> Result<(), ServerFnError> {
+#[server(endpoint = "save_card_db")]
+pub async fn save_card_db(card: Card) -> Result<(), ServerFnError> {
     DB.with(|f| {
         f.execute(
-            "INSERT INTO searched_cards (id, name_en, name_de, book, page, side, entry, img_url) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
-            params![card.index, card.name_en, card.name_de, card.book, card.page, card.side, card.entry, card.img_url],
+            "INSERT INTO cards (id, name_en, name_de, book, page, side, entry, img_url, owned) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+            params![card.index, card.name_en, card.name_de, card.book, card.page, card.side, card.entry, card.img_url, card.owned],
         )
     })
     .map_err(|err| ServerFnError::ServerError {

@@ -29,7 +29,7 @@ pub enum Route {
 
 fn main() {
     #[cfg(not(feature = "server"))]
-    dioxus::fullstack::set_server_url("https://fs-chaot.fly.dev");
+    dioxus::fullstack::set_server_url("https://fs-chaot-production.up.railway.app");
 
     dioxus::launch(App);
 }
