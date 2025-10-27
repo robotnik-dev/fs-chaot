@@ -18,6 +18,9 @@ csv = "1.4.0"
 itertools = "0.14.0"
 rusqlite = { version = "0.37.0", features = ["bundled"], optional = true }
 
+[dev-dependencies]
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "time"] }
+
 [features]
 default = ["web", "server"]
 web = ["dioxus/web"]
