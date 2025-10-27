@@ -16,7 +16,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/robotnik-dev/dioxus-dev:latest
+      image: ghcr.io/robotnik-dev/dioxus-ci:latest
     steps:
       - uses: actions/checkout@v5
       - name: Run sccache-cache
@@ -27,7 +27,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/robotnik-dev/dioxus-dev:latest
+      image: ghcr.io/robotnik-dev/dioxus-ci:latest
     steps:
       - uses: actions/checkout@v5
       - name: Run sccache-cache
