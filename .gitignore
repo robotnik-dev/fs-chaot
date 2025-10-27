@@ -9,3 +9,8 @@
 /.direnv
 
 *.db
+
+.env
+# auto generated files
+test_report.json
+*_auto.json
