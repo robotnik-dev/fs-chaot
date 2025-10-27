@@ -19,9 +19,12 @@ const FAVICON: Asset = asset!("/assets/favicon.ico");
 
 #[derive(Routable, Clone, PartialEq)]
 pub enum Route {
-    #[layout(NavBar)]
     #[route("/")]
-    SearchView,
+    Login,
+
+    #[layout(ProtectedRoute)]
+    #[route("/home")]
+    Home,
 
     #[route("/history")]
     History,
@@ -34,7 +37,8 @@ fn main() {
     dioxus::launch(App);
 }
 
-static CARDS: GlobalSignal<Vec<(usize, Card)>> = Signal::global(Vec::new);
+pub static CARDS: GlobalSignal<Vec<(usize, Card)>> = Signal::global(Vec::new);
+pub static IS_AUTHENTICATED: GlobalSignal<bool> = Signal::global(|| false);
 
 #[component]
 fn App() -> Element {

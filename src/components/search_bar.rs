@@ -10,9 +10,9 @@ use dioxus::prelude::*;
 
 #[component]
 pub fn SearchBar() -> Element {
-    let mut search = use_signal(|| "".to_string());
+    let mut search = use_signal(String::new);
     let mut open = use_signal(|| false);
-    let mut error_message = use_signal(|| "".to_string());
+    let mut error_message = use_signal(String::new);
 
     rsx! {
         div { class: "input-group",
@@ -27,9 +27,6 @@ pub fn SearchBar() -> Element {
                     if event.key() == Key::Enter {
                         let name_or_id = search.peek().to_string();
                         if name_or_id.is_empty() {
-                            // search in DB to display the card and dont put duplicates in there
-                            // check if this card is already displayed
-                            // display card from db and return early
                             return;
                         }
 

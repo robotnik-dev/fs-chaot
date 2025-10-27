@@ -29,6 +29,13 @@ thread_local! {
     });
 }
 
+#[server(endpoint = "validate_password")]
+pub async fn validate_password(password: String) -> Result<bool, ServerFnError> {
+    let correct_password = std::env::var("APP_PASSWORD").unwrap();
+
+    Ok(password == correct_password)
+}
+
 #[server(endpoint = "get_card_by_id_remote")]
 pub async fn get_card_by_id_remote(id: usize) -> Result<Card, ServerFnError> {
     info!("get card from remote with id: {id}");

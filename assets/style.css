@@ -21,6 +21,22 @@
     color: white;
 }
 
+.logout-button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  background: var(--primary-color-7);
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 200ms ease;
+}
+
+.logout-button:hover {
+  background: var(--primary-color-8);
+}
+
 /* Dialog Backdrop */
 .dialog-backdrop {
   position: fixed;
@@ -258,6 +274,85 @@
   color: #333;
   margin-bottom: 16px;
   text-transform: capitalize;
+}
+
+/* Login container styling */
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: var(--primary-color-3);
+}
+
+.login-box {
+  background: var(--primary-color-5);
+  border: 1px solid var(--primary-color-6);
+  border-radius: 12px;
+  padding: 40px;
+  max-width: 400px;
+  width: 100%;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.login-box h1 {
+  text-align: center;
+  color: var(--secondary-color-4);
+  margin-bottom: 24px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--secondary-color-4);
+  font-weight: 600;
+}
+
+.form-group input[type="password"] {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--primary-color-6);
+  border-radius: 8px;
+  background: var(--primary-color-3);
+  color: var(--secondary-color-4);
+  font-size: 16px;
+}
+
+.form-group input[type="password"]:focus {
+  outline: none;
+  border-color: var(--primary-color-7);
+  background: var(--primary-color-4);
+}
+
+.login-box button[type="submit"] {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  background: var(--primary-color-7);
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 200ms ease;
+}
+
+.login-box button[type="submit"]:hover {
+  background: var(--primary-color-8);
+}
+
+.error {
+  color: #ff4444;
+  padding: 8px;
+  margin-top: 12px;
+  text-align: center;
+  font-size: 14px;
+  background: rgba(255, 68, 68, 0.1);
+  border-radius: 4px;
 }
 
 /* Dark mode support */
