@@ -9,6 +9,8 @@
 /.direnv
 
 *.db
+# Database folder (mounted as volume in production)
+db/
 
 .env
 # auto generated files

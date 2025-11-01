@@ -1,33 +1,28 @@
-FROM rust:1 AS chef
-RUN cargo install cargo-chef
+FROM ghcr.io/prefix-dev/pixi:0.40.0 AS builder
+
 WORKDIR /app
 
-FROM chef AS planner
-COPY . .
-RUN cargo chef prepare --recipe-path recipe.json
-
-FROM chef AS builder
-COPY --from=planner /app/recipe.json recipe.json
-RUN cargo chef cook --release --recipe-path recipe.json
 COPY . .
 
-# Install `dx`
-RUN curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
-RUN cargo binstall dioxus-cli@0.7.0-rc.3 --root /.cargo -y --force
-ENV PATH="/.cargo/bin:$PATH"
 
-# Create the final bundle folder. Bundle always executes in release mode with optimizations enabled
-RUN dx bundle --web --release
+RUN pixi install --locked
 
-FROM chef AS runtime
+ENV SSL_CERT_FILE=/app/.pixi/envs/default/ssl/cacert.pem \
+    CURL_CA_BUNDLE=/app/.pixi/envs/default/ssl/cacert.pem \
+    CARGO_HTTP_CAINFO=/app/.pixi/envs/default/ssl/cacert.pem
+
+RUN pixi run build
+
+FROM ubuntu:24.04
+
 COPY --from=builder /app/target/dx/fs-chaot/release/web/ /usr/local/app
 
-# set our port and make sure to listen for all connections
+RUN mkdir -p /db
+
 ENV PORT=8080
 ENV IP=0.0.0.0
 
-# expose the port 8080
 EXPOSE 8080
 
-WORKDIR /usr/local/app
 ENTRYPOINT [ "/usr/local/app/fs-chaot" ]
+
