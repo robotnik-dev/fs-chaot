@@ -5,9 +5,14 @@ platforms = ["linux-64"]
 version = "0.1.0"
 
 [tasks]
-install-binstall = "cargo install cargo-binstall"
-install-dx = { cmd = "cargo binstall dioxus-cli@0.7.0-rc3 -y --install-path $PIXI_PROJECT_ROOT/.pixi/envs/default/bin", depends-on = "install-binstall" }
-build = { cmd = "dx bundle --platform web --release", depends-on = "install-dx" }
+install-binstall = "curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash"
+install-dx-prod = { cmd = "cargo binstall dioxus-cli@0.7.0 -y --install-path $PIXI_PROJECT_ROOT/.pixi/envs/prod/bin", depends-on = "install-binstall" }
+# build = { cmd = "dx bundle --web --release" }
+# dev = { cmd = "dx serve --web" }
+build = { cmd = "dx bundle --web --release", depends-on = [
+  "install-dx-prod",
+  "install-binstall",
+] }
 dev = { cmd = "dx serve --platform web" }
 
 # TODO: lint and test tasks also for CI
@@ -20,6 +25,11 @@ taplo = ">=0.10.0,<0.11"
 yaml-language-server = ">=1.19.2,<2"
 lldb = ">=21.1.4,<22"
 rust-std-wasm32-unknown-unknown = ">=1.90.0,<2"
-curl = ">=8.16.0,<9"
-openssl = ">=3.5.4,<4"
 ca-certificates = ">=2025.10.5,<2026"
+curl = ">=8.16.0,<9"
+gxx_linux-64 = ">=15.2.0,<16"
+openssl = ">=3.5.4,<4"
+pkg-config = ">=0.29.2,<0.30"
+
+[environments]
+prod = { features = [], solve-group = "prod" }
