@@ -17,5 +17,5 @@ db/
 test_report.json
 *_auto.json
 # pixi environments
-.pixi/*
+.pixi/
 !.pixi/config.toml

@@ -13,9 +13,18 @@ build = { cmd = "dx bundle --web --release", depends-on = [
   "install-dx-prod",
   "install-binstall",
 ] }
-dev = { cmd = "dx serve --platform web" }
+dev = { cmd = "dx serve --web", depends-on = [
+  "install-dx-prod",
+  "install-binstall",
+] }
 
 # TODO: lint and test tasks also for CI
+
+[activation.env]
+PKG_CONFIG_PATH = "${CONDA_PREFIX}/lib/pkgconfig:${CONDA_PREFIX}/share/pkgconfig"
+
+[system-requirements]
+libc = { family = "glibc", version = "2.39" }
 
 [dependencies]
 rust = ">=1.90.0,<1.91"
@@ -23,13 +32,15 @@ rust-src = ">=1.90.0,<2"
 prettier = ">=3.6.2,<4"
 taplo = ">=0.10.0,<0.11"
 yaml-language-server = ">=1.19.2,<2"
-lldb = ">=21.1.4,<22"
 rust-std-wasm32-unknown-unknown = ">=1.90.0,<2"
 ca-certificates = ">=2025.10.5,<2026"
 curl = ">=8.16.0,<9"
 gxx_linux-64 = ">=15.2.0,<16"
 openssl = ">=3.5.4,<4"
 pkg-config = ">=0.29.2,<0.30"
+"webkit2gtk4.1" = ">=2.48.5,<3"
+librsvg = ">=2.58.4,<3"
+libsoup = ">=3.4.4,<4"
 
 [environments]
 prod = { features = [], solve-group = "prod" }
