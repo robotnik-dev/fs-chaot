@@ -6,7 +6,7 @@
 }
 
 /* Navbar*/
-.nav-bar{
+.nav-bar {
   text-align: center;
   padding-top: 10px;
   border-bottom: 1px solid #a8a8a8;
@@ -17,8 +17,8 @@
 }
 
 .nav-bar a {
-    text-decoration: none;
-    color: white;
+  text-decoration: none;
+  color: white;
 }
 
 .logout-button {
