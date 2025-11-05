@@ -6,19 +6,10 @@ version = "0.1.0"
 
 [tasks]
 install-binstall = "curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash"
-install-dx-prod = { cmd = "cargo binstall dioxus-cli@0.7.0 -y --install-path $PIXI_PROJECT_ROOT/.pixi/envs/prod/bin", depends-on = "install-binstall" }
-# build = { cmd = "dx bundle --web --release" }
-# dev = { cmd = "dx serve --web" }
-build = { cmd = "dx bundle --web --release", depends-on = [
-  "install-dx-prod",
-  "install-binstall",
-] }
-dev = { cmd = "dx serve --web", depends-on = [
-  "install-dx-prod",
-  "install-binstall",
-] }
-
-# TODO: lint and test tasks also for CI
+[tasks.install-dx]
+args = [{ arg = "env", default = "default" }]
+cmd = "cargo binstall dioxus-cli@0.7.0 -y --install-path $PIXI_PROJECT_ROOT/.pixi/envs/{{ env }}/bin"
+depends-on = "install-binstall"
 
 [activation.env]
 PKG_CONFIG_PATH = "${CONDA_PREFIX}/lib/pkgconfig:${CONDA_PREFIX}/share/pkgconfig"
@@ -26,21 +17,66 @@ PKG_CONFIG_PATH = "${CONDA_PREFIX}/lib/pkgconfig:${CONDA_PREFIX}/share/pkgconfig
 [system-requirements]
 libc = { family = "glibc", version = "2.39" }
 
+# Base dependencies - shared across all environments
 [dependencies]
 rust = ">=1.90.0,<1.91"
-rust-src = ">=1.90.0,<2"
-prettier = ">=3.6.2,<4"
-taplo = ">=0.10.0,<0.11"
-yaml-language-server = ">=1.19.2,<2"
 rust-std-wasm32-unknown-unknown = ">=1.90.0,<2"
 ca-certificates = ">=2025.10.5,<2026"
 curl = ">=8.16.0,<9"
-gxx_linux-64 = ">=15.2.0,<16"
 openssl = ">=3.5.4,<4"
 pkg-config = ">=0.29.2,<0.30"
 "webkit2gtk4.1" = ">=2.48.5,<3"
 librsvg = ">=2.58.4,<3"
 libsoup = ">=3.4.4,<4"
+xdotool = ">=3.20211022.1,<4"
+
+# Development feature - tools and dependencies for development
+[feature.dev.dependencies]
+rust-src = ">=1.90.0,<2"
+prettier = ">=3.6.2,<4"
+taplo = ">=0.10.0,<0.11"
+yaml-language-server = ">=1.19.2,<2"
+
+[feature.dev.tasks]
+cargo-fmt = "cargo fmt --all --check"
+taplo-fmt = "taplo fmt --check"
+prettier-fmt = "prettier --check ."
+dx-check = { cmd = "dx check --fullstack --all-features --release --locked", depends-on = [
+  "install-dx",
+] }
+clippy = "cargo clippy --all-features --release --locked -- -D warnings"
+
+test = "cargo test --all-features --release --locked"
+fmt = { depends-on = ["cargo-fmt", "taplo-fmt", "prettier-fmt"] }
+lint = { depends-on = ["clippy", "dx-check"] }
+
+check-all = { depends-on = ["fmt", "test", "lint"] }
+
+# destructive changes to code
+cargo-fmt-write = "cargo fmt --all"
+taplo-fmt-write = "taplo fmt"
+prettier-fmt-write = "prettier --write ."
+fmt-write = { depends-on = [
+  "cargo-fmt-write",
+  "taplo-fmt-write",
+  "prettier-fmt-write",
+] }
+
+[feature.dev.tasks.serve]
+cmd = "dx serve --web"
+depends-on = ["install-dx"]
+
+[feature.prod.dependencies]
+gxx_linux-64 = ">=15.2.0,<16"
+
+[feature.prod.tasks.build-optimized]
+cmd = "dx bundle --web --release --optimize"
+depends-on = [{ task = "install-dx", args = [{ env = "prod" }] }]
+
+[feature.prod.tasks.build]
+cmd = "dx bundle --web --release"
+depends-on = [{ task = "install-dx", args = [{ env = "prod" }] }]
 
 [environments]
-prod = { features = [], solve-group = "prod" }
+default = { features = ["dev"], solve-group = "prod" }
+prod = { features = ["prod"], solve-group = "prod" }
