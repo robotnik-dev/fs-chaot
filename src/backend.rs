@@ -7,6 +7,8 @@ use rusqlite::params;
 #[cfg(feature = "server")]
 thread_local! {
     static DB: std::sync::LazyLock<rusqlite::Connection> = std::sync::LazyLock::new(|| {
+        std::fs::create_dir_all("db").expect("Failed to create db directory");
+
         let conn = rusqlite::Connection::open("db/production.db").expect("Failed to open database");
 
         conn.execute_batch(
@@ -29,14 +31,19 @@ thread_local! {
     });
 }
 
-#[server(endpoint = "validate_password")]
+// FIXME: wait for issue to be resolved
+// #[server(endpoint = "validate_password")]
+#[server]
 pub async fn validate_password(password: String) -> Result<bool, ServerFnError> {
+    debug!("validating pw");
     let correct_password = std::env::var("APP_PASSWORD").unwrap();
 
     Ok(password == correct_password)
 }
 
-#[server(endpoint = "get_card_by_id_remote")]
+// FIXME: wait for issue to be resolved
+// #[server(endpoint = "get_card_by_id_remote")]
+#[server]
 pub async fn get_card_by_id_remote(id: usize) -> Result<Card, ServerFnError> {
     info!("get card from remote with id: {id}");
     match Index::try_new(id) {
@@ -49,13 +56,17 @@ pub async fn get_card_by_id_remote(id: usize) -> Result<Card, ServerFnError> {
     }
 }
 
-#[server(endpoint = "get_card_by_name_remote")]
+// FIXME: wait for issue to be resolved
+// #[server(endpoint = "get_card_by_name_remote")]
+#[server]
 pub async fn get_card_by_name_remote(name: String) -> Result<Card, ServerFnError> {
     info!("get card from remote with name: {name}");
     Ok(Card::try_from_name(Name::new(name.as_str())).await?)
 }
 
-#[server(endpoint = "get_card_by_id_db")]
+// FIXME: wait for issue to be resolved
+// #[server(endpoint = "get_card_by_id_db")]
+#[server]
 pub async fn get_card_by_id_db(id: usize) -> Result<Card> {
     info!("get card from DB with id: {id}");
     DB.with(|db| {
@@ -79,7 +90,9 @@ pub async fn get_card_by_id_db(id: usize) -> Result<Card> {
     })
 }
 
-#[server(endpoint = "get_card_by_name_db")]
+// FIXME: wait for issue to be resolved
+// #[server(endpoint = "get_card_by_name_db")]
+#[server]
 pub async fn get_card_by_name_db(name: String) -> Result<Card> {
     info!("get card from DB with name: {name}");
     DB.with(|db| {
@@ -103,7 +116,9 @@ pub async fn get_card_by_name_db(name: String) -> Result<Card> {
     })
 }
 
-#[server(endpoint = "get_cards_with_timestamp_db")]
+// FIXME: wait for issue to be resolved
+// #[server(endpoint = "get_cards_with_timestamp_db")]
+#[server]
 pub async fn get_cards_with_timestamp_db() -> Result<Vec<(Card, String)>> {
     info!("get all cards from DB");
     DB.with(|db| {
@@ -131,7 +146,9 @@ pub async fn get_cards_with_timestamp_db() -> Result<Vec<(Card, String)>> {
     })
 }
 
-#[server(endpoint = "save_card_db")]
+// FIXME: wait for issue to be resolved
+// #[server(endpoint = "save_card_db")]
+#[server]
 pub async fn save_card_db(card: Card) -> Result<(), ServerFnError> {
     info!("save card to DB: {card:#?}");
     DB.with(|f| {
