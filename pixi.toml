@@ -58,10 +58,12 @@ check-all = { depends-on = ["fmt", "test", "lint"] }
 cargo-fmt-write = "cargo fmt --all"
 taplo-fmt-write = "taplo fmt"
 prettier-fmt-write = "prettier --write ."
+dx-fmt-write = "dx fmt"
 fmt-write = { depends-on = [
   "cargo-fmt-write",
   "taplo-fmt-write",
   "prettier-fmt-write",
+  "dx-fmt-write",
 ] }
 
 [feature.dev.tasks.serve]

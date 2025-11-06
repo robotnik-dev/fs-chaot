@@ -1,8 +1,6 @@
 use crate::card::{Card, Index, Name};
 use anyhow::Result;
 use dioxus::prelude::*;
-#[cfg(feature = "server")]
-use rusqlite::params;
 
 #[cfg(feature = "server")]
 thread_local! {
@@ -20,6 +18,7 @@ thread_local! {
                 entry INTEGER NOT NULL,
                 img_url TEXT NOT NULL,
                 owned BOOLEAN NOT NULL CHECK (owned IN (0,1)),
+                rarity TEXT NOT NULL,
                 created_at DATETIME DEFAULT (datetime('now', 'localtime'))
             );",
         )
@@ -29,7 +28,8 @@ thread_local! {
     });
 }
 
-#[server(endpoint = "validate_password")]
+// #[server(endpoint = "validate_password")]
+#[server]
 pub async fn validate_password(password: String) -> Result<bool, ServerFnError> {
     debug!("validating pw");
     let correct_password = std::env::var("APP_PASSWORD").unwrap();
@@ -37,7 +37,8 @@ pub async fn validate_password(password: String) -> Result<bool, ServerFnError> 
     Ok(password == correct_password)
 }
 
-#[server(endpoint = "get_card_by_id_remote")]
+// #[server(endpoint = "get_card_by_id_remote")]
+#[server]
 pub async fn get_card_by_id_remote(id: usize) -> Result<Card, ServerFnError> {
     info!("get card from remote with id: {id}");
     match Index::try_new(id) {
@@ -50,13 +51,15 @@ pub async fn get_card_by_id_remote(id: usize) -> Result<Card, ServerFnError> {
     }
 }
 
-#[server(endpoint = "get_card_by_name_remote")]
+// #[server(endpoint = "get_card_by_name_remote")]
+#[server]
 pub async fn get_card_by_name_remote(name: String) -> Result<Card, ServerFnError> {
     info!("get card from remote with name: {name}");
     Ok(Card::try_from_name(Name::new(name.as_str())).await?)
 }
 
-#[server(endpoint = "get_card_by_id_db")]
+// #[server(endpoint = "get_card_by_id_db")]
+#[server]
 pub async fn get_card_by_id_db(id: usize) -> Result<Card> {
     info!("get card from DB with id: {id}");
     DB.with(|db| {
@@ -81,7 +84,8 @@ pub async fn get_card_by_id_db(id: usize) -> Result<Card> {
     })
 }
 
-#[server(endpoint = "get_card_by_name_db")]
+// #[server(endpoint = "get_card_by_name_db")]
+#[server]
 pub async fn get_card_by_name_db(name: String) -> Result<Card> {
     info!("get card from DB with name: {name}");
     DB.with(|db| {
@@ -106,7 +110,8 @@ pub async fn get_card_by_name_db(name: String) -> Result<Card> {
     })
 }
 
-#[server(endpoint = "get_cards_with_timestamp_db")]
+// #[server(endpoint = "get_cards_with_timestamp_db")]
+#[server]
 pub async fn get_cards_with_timestamp_db() -> Result<Vec<(Card, String)>> {
     info!("get all cards from DB");
     DB.with(|db| {
@@ -135,13 +140,16 @@ pub async fn get_cards_with_timestamp_db() -> Result<Vec<(Card, String)>> {
     })
 }
 
-#[server(endpoint = "save_card_db")]
+// #[server(endpoint = "save_card_db")]
+#[server]
 pub async fn save_card_db(card: Card) -> Result<(), ServerFnError> {
+    use rusqlite::params;
+
     info!("save card to DB: {card:#?}");
     DB.with(|f| {
         f.execute(
-            "INSERT INTO cards (id, name_en, name_de, book, page, side, entry, img_url, owned) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
-            params![card.index, card.name_en, card.name_de, card.book, card.page, card.side, card.entry, card.img_url, card.owned],
+            "INSERT INTO cards (id, name_en, name_de, book, page, side, entry, img_url, owned, rarity) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+            params![card.index, card.name_en, card.name_de, card.book, card.page, card.side, card.entry, card.img_url, card.owned, card.rarity],
         )
     })
     .map_err(|err| ServerFnError::ServerError {
