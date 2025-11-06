@@ -7,8 +7,6 @@ use rusqlite::params;
 #[cfg(feature = "server")]
 thread_local! {
     static DB: std::sync::LazyLock<rusqlite::Connection> = std::sync::LazyLock::new(|| {
-        std::fs::create_dir_all("db").expect("Failed to create db directory");
-
         let conn = rusqlite::Connection::open("db/production.db").expect("Failed to open database");
 
         conn.execute_batch(
