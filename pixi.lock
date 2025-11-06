@@ -19,9 +19,11 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/c-ares-1.34.5-hb9d3cd8_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/ca-certificates-2025.10.5-hbd8a1cb_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/cairo-1.18.4-h3394656_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/compose-language-service-0.4.0-ha4bf28d_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/curl-8.16.0-h4e3cde8_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/dav1d-1.2.1-hd590300_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/dbus-1.16.2-h3c4dab8_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/dockerfile-language-server-nodejs-0.14.0-ha4bf28d_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/enchant-2.8.2-h02132a2_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/epoxy-1.5.10-hb03c661_2.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/font-ttf-dejavu-sans-mono-2.37-hab24e00_0.tar.bz2
@@ -545,6 +547,15 @@ packages:
   license: LGPL-2.1-only or MPL-1.1
   size: 978114
   timestamp: 1741554591855
+- conda: https://conda.anaconda.org/conda-forge/noarch/compose-language-service-0.4.0-ha4bf28d_0.conda
+  sha256: 6483529cdf07841a65ed07cb76f507c8a5de5884743d2f69fa5bbf7e15b3e749
+  md5: 09c217d29bbc515f5dfcf957ae0ece2d
+  depends:
+  - nodejs
+  license: MIT
+  license_family: MIT
+  size: 287375
+  timestamp: 1744988710342
 - conda: https://conda.anaconda.org/conda-forge/linux-64/curl-8.16.0-h4e3cde8_0.conda
   sha256: 3a16abbdc43bdf36ea6a446099120cf58c6189dd1a0c877940edefde42ae5daf
   md5: d0147bee507ee3e367c685f4496e50db
@@ -585,6 +596,15 @@ packages:
   license_family: GPL
   size: 437860
   timestamp: 1747855126005
+- conda: https://conda.anaconda.org/conda-forge/noarch/dockerfile-language-server-nodejs-0.14.0-ha4bf28d_0.conda
+  sha256: 650161e5245f2b968818eb07cb3fec7f747a174b4f10a35af85169ff26c7d26f
+  md5: 11fd45b3fb8aa38025ab085e959a1e05
+  depends:
+  - nodejs
+  license: MIT
+  license_family: MIT
+  size: 269030
+  timestamp: 1744387358242
 - conda: https://conda.anaconda.org/conda-forge/linux-64/enchant-2.8.2-h02132a2_0.conda
   sha256: 68609508da86f8819911ce1fc87f49d8d081bf05427dbf1a9eb34428eff5cc7d
   md5: 15936ecda6b67a6dea44f7093c594bd4

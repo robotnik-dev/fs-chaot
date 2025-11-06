@@ -36,6 +36,8 @@ rust-src = ">=1.90.0,<2"
 prettier = ">=3.6.2,<4"
 taplo = ">=0.10.0,<0.11"
 yaml-language-server = ">=1.19.2,<2"
+dockerfile-language-server-nodejs = ">=0.14.0,<0.15"
+compose-language-service = ">=0.4.0,<0.5"
 
 [feature.dev.tasks]
 cargo-fmt = "cargo fmt --all --check"
