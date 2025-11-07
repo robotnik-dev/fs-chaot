@@ -7,7 +7,9 @@ mod login;
 mod nav_bar;
 mod protected_route;
 mod search_bar;
+mod collection;
 
+pub use collection::*;
 pub use card_container::*;
 pub use card_view::*;
 pub use dialog::*;

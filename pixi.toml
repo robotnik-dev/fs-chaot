@@ -8,7 +8,7 @@ version = "0.1.0"
 install-binstall = "curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash"
 [tasks.install-dx]
 args = [{ arg = "env", default = "default" }]
-cmd = "cargo binstall dioxus-cli@0.7.0 -y --install-path $PIXI_PROJECT_ROOT/.pixi/envs/{{ env }}/bin"
+cmd = "cargo binstall dioxus-cli@0.7.1 -y --install-path $PIXI_PROJECT_ROOT/.pixi/envs/{{ env }}/bin"
 depends-on = "install-binstall"
 
 [activation.env]
@@ -67,7 +67,7 @@ fmt-write = { depends-on = [
 ] }
 
 [feature.dev.tasks.serve]
-cmd = "dx serve --web"
+cmd = "bash -c '[ -f .env ] && export $(cat .env | xargs) && dx serve --web'"
 depends-on = ["install-dx"]
 
 [feature.prod.dependencies]
