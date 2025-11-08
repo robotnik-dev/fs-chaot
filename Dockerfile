@@ -12,9 +12,9 @@ RUN pixi install --locked -e prod
 
 # Copy only Cargo files to cache dependency compilation
 COPY Cargo.toml Cargo.lock ./
-RUN --mount=type=cache,id=s/fs-chaot-/root/.cargo/git,target=/root/.cargo/git \
-    --mount=type=cache,id=s/fs-chaot-/root/.cargo/registry,target=/root/.cargo/registry \
-    --mount=type=cache,id=s/fs-chaot-/app/target,target=/app/target \
+RUN --mount=type=cache,id=s/625ff1d1-f627-41eb-9eab-f51da15475c6-/root/.cargo/git,target=/root/.cargo/git \
+    --mount=type=cache,id=s/625ff1d1-f627-41eb-9eab-f51da15475c6-/root/.cargo/registry,target=/root/.cargo/registry \
+    --mount=type=cache,id=s/625ff1d1-f627-41eb-9eab-f51da15475c6-/app/target,target=/app/target \
     mkdir -p src && echo "fn main() {}" > src/main.rs && \
     pixi run -e prod cargo build --release && \
     rm -rf src
@@ -23,9 +23,9 @@ RUN --mount=type=cache,id=s/fs-chaot-/root/.cargo/git,target=/root/.cargo/git \
 COPY . .
 
 # Build the actual application with BuildKit cache mounts
-RUN --mount=type=cache,id=s/fs-chaot-/root/.cargo/git,target=/root/.cargo/git \
-    --mount=type=cache,id=s/fs-chaot-/root/.cargo/registry,target=/root/.cargo/registry \
-    --mount=type=cache,id=s/fs-chaot-/app/target,target=/app/target \
+RUN --mount=type=cache,id=s/625ff1d1-f627-41eb-9eab-f51da15475c6-/root/.cargo/git,target=/root/.cargo/git \
+    --mount=type=cache,id=s/625ff1d1-f627-41eb-9eab-f51da15475c6-/root/.cargo/registry,target=/root/.cargo/registry \
+    --mount=type=cache,id=s/625ff1d1-f627-41eb-9eab-f51da15475c6-/app/target,target=/app/target \
     pixi run -e prod build && \
     mkdir -p /tmp/output && \
     cp -r target/dx/fs-chaot/release/web /tmp/output/
