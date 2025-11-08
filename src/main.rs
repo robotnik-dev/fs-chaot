@@ -5,6 +5,7 @@ mod backend;
 mod card;
 mod components;
 mod csv_record;
+mod expansion;
 mod pokeapi;
 
 pub const BASE_URL: &str = "https://pokeapi.co/api/v2/pokemon/";
@@ -28,6 +29,9 @@ pub enum Route {
 
     #[route("/history")]
     History,
+
+    #[route("/collection")]
+    Collection,
 }
 
 fn main() {

@@ -13,6 +13,7 @@ pub fn NavBar() -> Element {
     rsx! {
         div { class: "nav-bar",
             Link { to: Route::History, class: "search-history-link", "Search history" }
+            Link { to: Route::Collection, "My Collection" }
             Link { to: Route::Home,
                 h1 { "Home" }
             }

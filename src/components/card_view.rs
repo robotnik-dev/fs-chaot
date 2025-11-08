@@ -2,9 +2,22 @@ use crate::card::Card;
 use dioxus::prelude::*;
 
 #[component]
-pub fn CardView(card: Card) -> Element {
+pub fn CardView(card: Card, onclick: Option<EventHandler<usize>>) -> Element {
+    let clickable = onclick.is_some();
+    let class_name = if clickable {
+        "card card-clickable"
+    } else {
+        "card"
+    };
+
     rsx! {
-        div { class: "card",
+        div {
+            class: "{class_name}",
+            onclick: move |_| {
+                if let Some(handler) = onclick {
+                    handler.call(card.index.0);
+                }
+            },
             div { class: "card-title", "{card.name_de}" }
             div { class: "card-image",
                 img { src: "{card.img_url}" }
