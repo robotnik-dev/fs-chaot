@@ -18,6 +18,7 @@ pub struct Card {
     pub entry: Entry,
     pub img_url: String,
     pub owned: Bool,
+    pub rarity: Rarity,
 }
 
 impl Card {
@@ -61,6 +62,62 @@ impl Card {
         let id = PokeApi::get_id(BASE_URL, LANGUAGE_URL, &name).await?;
         let index = Index::try_new(id)?;
         Card::try_from_index(index).await
+    }
+}
+
+#[derive(Default, Debug, Clone, serde::Deserialize, serde::Serialize, PartialEq)]
+pub enum Rarity {
+    #[default]
+    Common,
+    Uncommon,
+    Rare,
+    HoloRare,
+    UltraRare,
+    SecretRare,
+}
+
+impl Display for Rarity {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Common => f.write_str("Common ●"),
+            Self::Uncommon => f.write_str("Uncommon ♦"),
+            Self::Rare => f.write_str("Rare ★"),
+            Self::HoloRare => f.write_str("Holo Rare ★H"),
+            Self::UltraRare => f.write_str("Ultra Rare"),
+            Self::SecretRare => f.write_str("Secret Rare"),
+        }
+    }
+}
+
+#[cfg(feature = "server")]
+impl ToSql for Rarity {
+    fn to_sql(&self) -> rusqlite::Result<rusqlite::types::ToSqlOutput<'_>> {
+        Ok(ToSqlOutput::Owned(rusqlite::types::Value::Text(
+            self.to_string(),
+        )))
+    }
+}
+
+#[cfg(feature = "server")]
+impl FromSql for Rarity {
+    fn column_result(value: rusqlite::types::ValueRef<'_>) -> rusqlite::types::FromSqlResult<Self> {
+        FromSqlResult::Ok(Rarity::from(value.as_str()?))
+    }
+}
+
+impl From<&str> for Rarity {
+    fn from(value: &str) -> Self {
+        match value {
+            "Common ●" => Self::Common,
+            "Uncommon ♦" => Self::Uncommon,
+            "Rare ★" => Self::Rare,
+            "Holo Rare ★H" => Self::HoloRare,
+            "Ultra Rare" => Self::UltraRare,
+            "Secret Rare" => Self::SecretRare,
+            _ => {
+                panic!("This should never be reached ..")
+            }
+        }
     }
 }
 

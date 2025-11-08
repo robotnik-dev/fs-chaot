@@ -1,33 +1,49 @@
-FROM rust:1 AS chef
-RUN cargo install cargo-chef
+FROM ghcr.io/prefix-dev/pixi:latest AS builder
+
 WORKDIR /app
 
-FROM chef AS planner
+ENV SSL_CERT_FILE=/app/.pixi/envs/prod/ssl/cacert.pem \
+    CURL_CA_BUNDLE=/app/.pixi/envs/prod/ssl/cacert.pem \
+    CARGO_HTTP_CAINFO=/app/.pixi/envs/prod/ssl/cacert.pem
+
+# Copy only dependency files first to cache pixi install layer
+COPY pixi.toml pixi.lock ./
+RUN pixi install --locked -e prod
+
+# Copy only Cargo files to cache dependency compilation
+COPY Cargo.toml Cargo.lock ./
+RUN --mount=type=cache,target=/root/.cargo/git \
+    --mount=type=cache,target=/root/.cargo/registry \
+    --mount=type=cache,target=/app/target \
+    mkdir -p src && echo "fn main() {}" > src/main.rs && \
+    pixi run -e prod cargo build --release && \
+    rm -rf src
+
+# Now copy the actual source code
 COPY . .
-RUN cargo chef prepare --recipe-path recipe.json
 
-FROM chef AS builder
-COPY --from=planner /app/recipe.json recipe.json
-RUN cargo chef cook --release --recipe-path recipe.json
-COPY . .
+# Build the actual application with BuildKit cache mounts
+RUN --mount=type=cache,target=/root/.cargo/git \
+    --mount=type=cache,target=/root/.cargo/registry \
+    --mount=type=cache,target=/app/target \
+    pixi run -e prod build && \
+    mkdir -p /tmp/output && \
+    cp -r target/dx/fs-chaot/release/web /tmp/output/
 
-# Install `dx`
-RUN curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
-RUN cargo binstall dioxus-cli@0.7.0-rc.3 --root /.cargo -y --force
-ENV PATH="/.cargo/bin:$PATH"
+FROM ubuntu:24.04 AS production
 
-# Create the final bundle folder. Bundle always executes in release mode with optimizations enabled
-RUN dx bundle --web --release
+RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
 
-FROM chef AS runtime
-COPY --from=builder /app/target/dx/fs-chaot/release/web/ /usr/local/app
+COPY --from=builder /tmp/output/web/ /usr/local/app
 
-# set our port and make sure to listen for all connections
+# Create db directory and set permissions
+RUN mkdir -p /usr/local/app/db && chmod 777 /usr/local/app/db
+
 ENV PORT=8080
 ENV IP=0.0.0.0
 
-# expose the port 8080
 EXPOSE 8080
 
 WORKDIR /usr/local/app
-ENTRYPOINT [ "/usr/local/app/fs-chaot" ]
+
+ENTRYPOINT ["/usr/local/app/fs-chaot"]

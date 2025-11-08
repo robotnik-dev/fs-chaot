@@ -9,8 +9,13 @@
 /.direnv
 
 *.db
+# Database folder (mounted as volume in production)
+db/
 
 .env
 # auto generated files
 test_report.json
 *_auto.json
+# pixi environments
+.pixi/
+!.pixi/config.toml

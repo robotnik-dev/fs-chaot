@@ -6,33 +6,45 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  CARGO_TERM_COLOR: always
-  RUSTFLAGS: "-Dwarnings"
-  SCCACHE_GHA_ENABLED: "true"
-  RUSTC_WRAPPER: "sccache"
-
 jobs:
-  test:
+  fmt:
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/robotnik-dev/dioxus-ci:latest
     steps:
       - uses: actions/checkout@v5
-      - name: Run sccache-cache
-        uses: mozilla-actions/sccache-action@v0.0.9
-      - name: cargo test
-        run: cargo test --all-features --all-targets --release
+
+      - name: Setup pixi
+        uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          pixi-version: v0.59.0
+          cache: true
+
+      - name: Run formatting checks
+        run: pixi run fmt
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup pixi
+        uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          pixi-version: v0.59.0
+          cache: true
+
+      - name: Run tests
+        run: pixi run test
 
   lint:
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/robotnik-dev/dioxus-ci:latest
     steps:
       - uses: actions/checkout@v5
-      - name: Run sccache-cache
-        uses: mozilla-actions/sccache-action@v0.0.9
-      - name: Cargo fmt check
-        run: cargo fmt --all --check
-      - name: Cargo Clippy
-        run: cargo clippy --all-features --all-targets --locked
+
+      - name: Setup pixi
+        uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          pixi-version: v0.59.0
+          cache: true
+
+      - name: Run linting
+        run: pixi run lint

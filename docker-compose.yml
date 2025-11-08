@@ -1,5 +1,13 @@
 services:
   app:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
       - "8080:8080"
+    volumes:
+      - ./db:/usr/local/app/db
+    environment:
+      APP_PASSWORD: ${APP_PASSWORD}
+      DOCKER_BUILDKIT: 1
+      COMPOSE_DOCKER_CLI_BUILD: 1

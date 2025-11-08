@@ -1,13 +1,13 @@
-use crate::card::{Card, Index, Name};
+use crate::card::Card;
+use crate::expansion::{CardExpansion, Expansion};
 use anyhow::Result;
 use dioxus::prelude::*;
-#[cfg(feature = "server")]
-use rusqlite::params;
+use std::collections::HashMap;
 
 #[cfg(feature = "server")]
 thread_local! {
     static DB: std::sync::LazyLock<rusqlite::Connection> = std::sync::LazyLock::new(|| {
-        let conn = rusqlite::Connection::open("production.db").expect("Failed to open database");
+        let conn = rusqlite::Connection::open("db/production.db").expect("Failed to open database");
 
         conn.execute_batch(
             "CREATE TABLE IF NOT EXISTS cards (
@@ -20,13 +20,56 @@ thread_local! {
                 entry INTEGER NOT NULL,
                 img_url TEXT NOT NULL,
                 owned BOOLEAN NOT NULL CHECK (owned IN (0,1)),
+                rarity TEXT NOT NULL,
                 created_at DATETIME DEFAULT (datetime('now', 'localtime'))
-            );",
+            );
+
+            CREATE TABLE IF NOT EXISTS expansions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL UNIQUE,
+                cards INTEGER NOT NULL CHECK (cards > 0),
+                secret_cards INTEGER NOT NULL CHECK (secret_cards >= 0)
+            );
+
+            CREATE TABLE IF NOT EXISTS card_expansions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                card_id INTEGER NOT NULL,
+                expansion_id INTEGER NOT NULL,
+                card_number TEXT NOT NULL,
+                created_at DATETIME DEFAULT (datetime('now', 'localtime')),
+                FOREIGN KEY (card_id) REFERENCES cards(id) ON DELETE CASCADE,
+                FOREIGN KEY (expansion_id) REFERENCES expansions(id) ON DELETE CASCADE,
+                UNIQUE(card_id, expansion_id)
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_card_expansions_card_id ON card_expansions(card_id);
+            CREATE INDEX IF NOT EXISTS idx_card_expansions_expansion_id ON card_expansions(expansion_id);",
         )
-        .expect("failed to create database table");
+        .expect("failed to create database tables");
+
+        // Load expansions from SQL file if needed
+        init_expansions_if_needed(&conn).expect("failed to initialize expansions");
 
         conn
     });
+}
+
+#[cfg(feature = "server")]
+fn init_expansions_if_needed(conn: &rusqlite::Connection) -> Result<()> {
+    // Check if expansions table is empty
+    let count: i64 = conn.query_row("SELECT COUNT(*) FROM expansions", [], |row| row.get(0))?;
+
+    if count == 0 {
+        info!("Loading expansions from SQL file");
+        let sql_content = include_str!("../db_seed/expansions.sql");
+        conn.execute_batch(sql_content)?;
+
+        let new_count: i64 =
+            conn.query_row("SELECT COUNT(*) FROM expansions", [], |row| row.get(0))?;
+        info!("Loaded {} expansions", new_count);
+    }
+
+    Ok(())
 }
 
 #[server(endpoint = "validate_password")]
@@ -39,6 +82,7 @@ pub async fn validate_password(password: String) -> Result<bool, ServerFnError> 
 #[server(endpoint = "get_card_by_id_remote")]
 pub async fn get_card_by_id_remote(id: usize) -> Result<Card, ServerFnError> {
     info!("get card from remote with id: {id}");
+    use crate::card::Index;
     match Index::try_new(id) {
         Ok(index) => Ok(Card::try_from_index(index).await?),
         Err(err) => Err(ServerFnError::ServerError {
@@ -52,6 +96,7 @@ pub async fn get_card_by_id_remote(id: usize) -> Result<Card, ServerFnError> {
 #[server(endpoint = "get_card_by_name_remote")]
 pub async fn get_card_by_name_remote(name: String) -> Result<Card, ServerFnError> {
     info!("get card from remote with name: {name}");
+    use crate::card::Name;
     Ok(Card::try_from_name(Name::new(name.as_str())).await?)
 }
 
@@ -60,7 +105,7 @@ pub async fn get_card_by_id_db(id: usize) -> Result<Card> {
     info!("get card from DB with id: {id}");
     DB.with(|db| {
         db.prepare(
-            "SELECT id, name_en, name_de, book, page, side, entry, img_url, owned FROM cards WHERE id = ?",
+            "SELECT id, name_en, name_de, book, page, side, entry, img_url, owned, rarity FROM cards WHERE id = ?",
         )?
         .query_row([id], |row| {
             Ok(Card {
@@ -73,6 +118,7 @@ pub async fn get_card_by_id_db(id: usize) -> Result<Card> {
                 entry: row.get(6)?,
                 img_url: row.get(7)?,
                 owned: row.get(8)?,
+                rarity: row.get(9)?,
             })
         })
         .map_err(|e| e.into())
@@ -84,7 +130,7 @@ pub async fn get_card_by_name_db(name: String) -> Result<Card> {
     info!("get card from DB with name: {name}");
     DB.with(|db| {
         db.prepare(
-            "SELECT id, name_en, name_de, book, page, side, entry, img_url, owned FROM cards WHERE name_de = ? COLLATE NOCASE OR name_en = ? COLLATE NOCASE",
+            "SELECT id, name_en, name_de, book, page, side, entry, img_url, owned, rarity FROM cards WHERE name_de = ? COLLATE NOCASE OR name_en = ? COLLATE NOCASE",
         )?
         .query_row([&name, &name], |row| {
             Ok(Card {
@@ -97,6 +143,7 @@ pub async fn get_card_by_name_db(name: String) -> Result<Card> {
                 entry: row.get(6)?,
                 img_url: row.get(7)?,
                 owned: row.get(8)?,
+                rarity: row.get(9)?,
             })
         })
         .map_err(|e| e.into())
@@ -109,7 +156,7 @@ pub async fn get_cards_with_timestamp_db() -> Result<Vec<(Card, String)>> {
     DB.with(|db| {
         Ok(db
             .prepare(
-                "SELECT id, name_en, name_de, book, page, side, entry, img_url, owned, created_at FROM cards",
+                "SELECT id, name_en, name_de, book, page, side, entry, img_url, owned, rarity, created_at FROM cards",
             )?
             .query_map([], |row| {
                 Ok((
@@ -123,8 +170,9 @@ pub async fn get_cards_with_timestamp_db() -> Result<Vec<(Card, String)>> {
                         entry: row.get(6)?,
                         img_url: row.get(7)?,
                         owned: row.get(8)?,
+                        rarity: row.get(9)?,
                     },
-                    row.get(9)?
+                    row.get(10)?
                 ))
             })?
             .collect::<Result<Vec<(Card, String)>, rusqlite::Error>>()?)
@@ -133,17 +181,221 @@ pub async fn get_cards_with_timestamp_db() -> Result<Vec<(Card, String)>> {
 
 #[server(endpoint = "save_card_db")]
 pub async fn save_card_db(card: Card) -> Result<(), ServerFnError> {
+    use rusqlite::params;
+
     info!("save card to DB: {card:#?}");
     DB.with(|f| {
         f.execute(
-            "INSERT INTO cards (id, name_en, name_de, book, page, side, entry, img_url, owned) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
-            params![card.index, card.name_en, card.name_de, card.book, card.page, card.side, card.entry, card.img_url, card.owned],
+            "INSERT OR REPLACE INTO cards (id, name_en, name_de, book, page, side, entry, img_url, owned, rarity) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+            params![card.index, card.name_en, card.name_de, card.book, card.page, card.side, card.entry, card.img_url, card.owned, card.rarity],
         )
     })
     .map_err(|err| ServerFnError::ServerError {
         message: err.to_string(),
         code: 500,
         details: Some("could not save card to DB".into()),
+    })?;
+    Ok(())
+}
+
+#[server(endpoint = "get_all_owned_cards_db")]
+pub async fn get_all_owned_cards_db() -> Result<HashMap<usize, Card>, ServerFnError> {
+    info!("get all owned cards from DB");
+    DB.with(|db| {
+        let mut stmt = db.prepare(
+            "SELECT id, name_en, name_de, book, page, side, entry, img_url, owned, rarity FROM cards WHERE owned = 1",
+        )?;
+
+        let cards = stmt
+            .query_map([], |row| {
+                let card = Card {
+                    index: row.get(0)?,
+                    name_en: row.get(1)?,
+                    name_de: row.get(2)?,
+                    book: row.get(3)?,
+                    page: row.get(4)?,
+                    side: row.get(5)?,
+                    entry: row.get(6)?,
+                    img_url: row.get(7)?,
+                    owned: row.get(8)?,
+                    rarity: row.get(9)?,
+                };
+                Ok((card.index.0, card))
+            })?
+            .collect::<Result<HashMap<usize, Card>, rusqlite::Error>>()?;
+
+        Ok(cards)
+    })
+    .map_err(|e: anyhow::Error| ServerFnError::ServerError {
+        message: e.to_string(),
+        code: 500,
+        details: Some("could not fetch owned cards from DB".into()),
+    })
+}
+
+#[server(endpoint = "update_card_db")]
+pub async fn update_card_db(card: Card) -> Result<(), ServerFnError> {
+    use rusqlite::params;
+
+    info!("update card in DB: {card:#?}");
+    DB.with(|f| {
+        f.execute(
+            "UPDATE cards SET name_en = ?1, name_de = ?2, book = ?3, page = ?4, side = ?5, entry = ?6, img_url = ?7, owned = ?8, rarity = ?9 WHERE id = ?10",
+            params![card.name_en, card.name_de, card.book, card.page, card.side, card.entry, card.img_url, card.owned, card.rarity, card.index],
+        )
+    })
+    .map_err(|err| ServerFnError::ServerError {
+        message: err.to_string(),
+        code: 500,
+        details: Some("could not update card in DB".into()),
+    })?;
+    Ok(())
+}
+
+// ==================== Expansion Server Functions ====================
+
+#[server(endpoint = "get_all_expansions_db")]
+pub async fn get_all_expansions_db() -> Result<Vec<Expansion>, ServerFnError> {
+    info!("get all expansions from DB");
+    DB.with(|db| {
+        let mut stmt =
+            db.prepare("SELECT id, name, cards, secret_cards FROM expansions ORDER BY name")?;
+
+        let expansions = stmt
+            .query_map([], |row| {
+                Ok(Expansion {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                    cards: row.get(2)?,
+                    secret_cards: row.get(3)?,
+                })
+            })?
+            .collect::<Result<Vec<Expansion>, rusqlite::Error>>()?;
+
+        Ok(expansions)
+    })
+    .map_err(|e: anyhow::Error| ServerFnError::ServerError {
+        message: e.to_string(),
+        code: 500,
+        details: Some("could not fetch expansions from DB".into()),
+    })
+}
+
+#[server(endpoint = "get_card_expansions_db")]
+pub async fn get_card_expansions_db(card_id: usize) -> Result<Vec<CardExpansion>, ServerFnError> {
+    info!("get card expansions from DB for card_id: {}", card_id);
+    DB.with(|db| {
+        let mut stmt = db.prepare(
+            "SELECT id, card_id, expansion_id, card_number FROM card_expansions WHERE card_id = ?",
+        )?;
+
+        let card_expansions = stmt
+            .query_map([card_id], |row| {
+                Ok(CardExpansion {
+                    id: Some(row.get(0)?),
+                    card_id: row.get(1)?,
+                    expansion_id: row.get(2)?,
+                    card_number: row.get(3)?,
+                })
+            })?
+            .collect::<Result<Vec<CardExpansion>, rusqlite::Error>>()?;
+
+        Ok(card_expansions)
+    })
+    .map_err(|e: anyhow::Error| ServerFnError::ServerError {
+        message: e.to_string(),
+        code: 500,
+        details: Some("could not fetch card expansions from DB".into()),
+    })
+}
+
+#[server(endpoint = "save_card_expansion_db")]
+pub async fn save_card_expansion_db(card_expansion: CardExpansion) -> Result<(), ServerFnError> {
+    use rusqlite::params;
+
+    info!("save card expansion to DB: {card_expansion:#?}");
+    DB.with(|f| {
+        f.execute(
+            "INSERT INTO card_expansions (card_id, expansion_id, card_number) VALUES (?1, ?2, ?3)",
+            params![
+                card_expansion.card_id,
+                card_expansion.expansion_id,
+                card_expansion.card_number
+            ],
+        )
+    })
+    .map_err(|err| ServerFnError::ServerError {
+        message: err.to_string(),
+        code: 500,
+        details: Some("could not save card expansion to DB".into()),
+    })?;
+    Ok(())
+}
+
+#[server(endpoint = "update_card_expansion_db")]
+pub async fn update_card_expansion_db(card_expansion: CardExpansion) -> Result<(), ServerFnError> {
+    use rusqlite::params;
+
+    info!("update card expansion in DB: {card_expansion:#?}");
+
+    if card_expansion.id.is_none() {
+        return Err(ServerFnError::ServerError {
+            message: "Card expansion ID is required for update".to_string(),
+            code: 400,
+            details: None,
+        });
+    }
+
+    DB.with(|f| {
+        f.execute(
+            "UPDATE card_expansions SET expansion_id = ?1, card_number = ?2 WHERE id = ?3",
+            params![
+                card_expansion.expansion_id,
+                card_expansion.card_number,
+                card_expansion.id.unwrap()
+            ],
+        )
+    })
+    .map_err(|err| ServerFnError::ServerError {
+        message: err.to_string(),
+        code: 500,
+        details: Some("could not update card expansion in DB".into()),
+    })?;
+    Ok(())
+}
+
+#[server(endpoint = "delete_card_expansion_db")]
+pub async fn delete_card_expansion_db(id: usize) -> Result<(), ServerFnError> {
+    use rusqlite::params;
+
+    info!("delete card expansion from DB with id: {}", id);
+    DB.with(|f| f.execute("DELETE FROM card_expansions WHERE id = ?1", params![id]))
+        .map_err(|err| ServerFnError::ServerError {
+            message: err.to_string(),
+            code: 500,
+            details: Some("could not delete card expansion from DB".into()),
+        })?;
+    Ok(())
+}
+
+#[server(endpoint = "delete_all_card_expansions_db")]
+pub async fn delete_all_card_expansions_db(card_id: usize) -> Result<(), ServerFnError> {
+    use rusqlite::params;
+
+    info!(
+        "delete all card expansions from DB for card_id: {}",
+        card_id
+    );
+    DB.with(|f| {
+        f.execute(
+            "DELETE FROM card_expansions WHERE card_id = ?1",
+            params![card_id],
+        )
+    })
+    .map_err(|err| ServerFnError::ServerError {
+        message: err.to_string(),
+        code: 500,
+        details: Some("could not delete card expansions from DB".into()),
     })?;
     Ok(())
 }

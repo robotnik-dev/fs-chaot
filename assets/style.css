@@ -6,7 +6,7 @@
 }
 
 /* Navbar*/
-.nav-bar{
+.nav-bar {
   text-align: center;
   padding-top: 10px;
   border-bottom: 1px solid #a8a8a8;
@@ -17,8 +17,8 @@
 }
 
 .nav-bar a {
-    text-decoration: none;
-    color: white;
+  text-decoration: none;
+  color: white;
 }
 
 .logout-button {
@@ -225,6 +225,12 @@
   text-align: center;
 }
 
+.card:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  z-index: 1;
+}
+
 .card-image {
   width: 150px;
   height: 150px;
@@ -380,5 +386,660 @@
 
   .card-row {
     border-bottom-color: #3a3a3a;
+  }
+}
+
+/* Collection / Book View Styles */
+.collection-container {
+  padding: 20px;
+  max-width: 1600px;
+  margin: 0 auto;
+  min-height: 100vh;
+  background: var(--primary-color-3);
+}
+
+/* Book Navigation */
+.book-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 20px;
+  background: var(--primary-color-5);
+  border: 1px solid var(--primary-color-6);
+  border-radius: 12px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.book-nav__search {
+  padding: 10px 16px;
+  border: 1px solid var(--primary-color-6);
+  border-radius: 8px;
+  background: var(--primary-color-3);
+  color: var(--secondary-color-4);
+  font-size: 14px;
+  min-width: 250px;
+  transition:
+    border-color 200ms ease,
+    background 200ms ease;
+}
+
+.book-nav__search:focus {
+  outline: none;
+  border-color: var(--primary-color-7);
+  background: var(--primary-color-4);
+}
+
+.book-nav__button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  background: var(--primary-color-7);
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 200ms ease,
+    opacity 200ms ease;
+}
+
+.book-nav__button:hover:not(:disabled) {
+  background: var(--primary-color-8);
+}
+
+.book-nav__button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.book-nav__dropdown {
+  padding: 10px 16px;
+  border: 1px solid var(--primary-color-6);
+  border-radius: 8px;
+  background: var(--primary-color-3);
+  color: var(--secondary-color-4);
+  font-size: 14px;
+  cursor: pointer;
+  transition: border-color 200ms ease;
+}
+
+.book-nav__dropdown:focus {
+  outline: none;
+  border-color: var(--primary-color-7);
+}
+
+/* Book View Container */
+.book-view-desktop {
+  display: flex;
+  justify-content: center;
+  padding: 20px;
+}
+
+.book-view-mobile {
+  padding: 12px;
+}
+
+/* Book Spread (Two-Page Layout) */
+.book-spread {
+  display: flex;
+  gap: 40px;
+  max-width: 1400px;
+  perspective: 1500px;
+}
+
+/* Book Page */
+.book-page {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: 16px;
+  padding: 32px;
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  min-height: 600px;
+  flex: 1;
+}
+
+.book-page--empty {
+  background: #f5f5f5;
+  border-style: dashed;
+  opacity: 0.5;
+}
+
+/* Compact Card Styles */
+.card-compact {
+  aspect-ratio: 3 / 4;
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  cursor: pointer;
+  transition:
+    transform 200ms ease,
+    box-shadow 200ms ease;
+  background: white;
+  position: relative;
+  overflow: hidden;
+}
+
+.card-compact:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  z-index: 1;
+}
+
+/* Owned Card */
+.card-compact--owned {
+  border: 3px solid #4caf50;
+  background: #fafafa;
+}
+
+/* Placeholder Card */
+.card-compact--placeholder {
+  border: 3px dashed #bbb;
+  background: #f9f9f9;
+  opacity: 0.6;
+}
+
+.card-compact--placeholder:hover {
+  opacity: 0.8;
+}
+
+/* Rarity Border Colors */
+.card-compact--rarity-common {
+  border-color: #9e9e9e;
+}
+
+.card-compact--rarity-uncommon {
+  border-color: #66bb6a;
+}
+
+.card-compact--rarity-rare {
+  border-color: #42a5f5;
+}
+
+.card-compact--rarity-holo-rare {
+  border-color: #ffa726;
+  box-shadow: 0 0 12px rgba(255, 167, 38, 0.4);
+}
+
+.card-compact--rarity-ultra-rare {
+  border-color: #ab47bc;
+  box-shadow: 0 0 16px rgba(171, 71, 188, 0.5);
+}
+
+.card-compact--rarity-secret-rare {
+  border-color: #26c6da;
+  box-shadow: 0 0 20px rgba(38, 198, 218, 0.6);
+}
+
+/* Card Compact Elements */
+.card-compact__sprite {
+  width: 100%;
+  max-width: 90px;
+  height: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.card-compact__sprite img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: crisp-edges;
+}
+
+.card-compact__name--de {
+  font-weight: 700;
+  font-size: 14px;
+  color: #212121;
+  text-align: center;
+  margin-bottom: 2px;
+  line-height: 1.2;
+}
+
+.card-compact__name--en {
+  font-size: 11px;
+  color: #757575;
+  text-align: center;
+  margin-bottom: 6px;
+  font-style: italic;
+  line-height: 1.2;
+}
+
+.card-compact__meta {
+  display: flex;
+  gap: 4px;
+  font-size: 10px;
+  color: #9e9e9e;
+  align-items: center;
+  margin-top: auto;
+}
+
+.card-compact__id {
+  font-size: 11px;
+  color: #9e9e9e;
+  text-align: center;
+  margin-top: 4px;
+}
+
+.card-compact__placeholder-icon {
+  width: 100%;
+  height: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
+  color: #ccc;
+  font-weight: 300;
+  margin-bottom: 8px;
+}
+
+.card-compact__placeholder-text {
+  font-size: 11px;
+  color: #bbb;
+  text-align: center;
+  margin-top: auto;
+}
+
+/* Card Dialog Styles */
+.card-dialog-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+}
+
+.card-dialog-image {
+  width: 150px;
+  height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f5f5;
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.card-dialog-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.card-dialog-name-de {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--secondary-color-4);
+  text-align: center;
+}
+
+.card-dialog-name-en {
+  font-size: 16px;
+  color: var(--secondary-color-5);
+  text-align: center;
+  font-style: italic;
+  margin-top: -8px;
+}
+
+.card-dialog-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  padding: 16px;
+  background: var(--primary-color-4);
+  border-radius: 8px;
+  text-align: center;
+  color: var(--secondary-color-4);
+}
+
+.dialog-loading {
+  padding: 40px;
+  text-align: center;
+  color: var(--secondary-color-5);
+  font-style: italic;
+}
+
+.btn-add {
+  padding: 14px 32px;
+  border: none;
+  border-radius: 8px;
+  background: #4caf50;
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 200ms ease;
+  width: 100%;
+}
+
+.btn-add:hover {
+  background: #45a049;
+}
+
+.btn-remove {
+  padding: 14px 32px;
+  border: none;
+  border-radius: 8px;
+  background: #f44336;
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 200ms ease;
+  width: 100%;
+}
+
+.btn-remove:hover {
+  background: #da190b;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .book-nav {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .book-nav__search {
+    width: 100%;
+    min-width: unset;
+  }
+
+  .book-spread {
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .book-page {
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(4, 1fr);
+    gap: 12px;
+    padding: 20px;
+    min-height: unset;
+  }
+
+  .book-view-mobile .book-page {
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(8, 1fr);
+  }
+
+  .card-compact__sprite {
+    max-width: 70px;
+    height: 70px;
+  }
+
+  .card-compact__name--de {
+    font-size: 12px;
+  }
+
+  .card-compact__name--en {
+    font-size: 10px;
+  }
+
+  .card-compact__meta {
+    font-size: 9px;
+  }
+}
+
+/* Dark Mode for Book View */
+@media (prefers-color-scheme: dark) {
+  .collection-container {
+    background: #1a1a1a;
+  }
+
+  .book-page {
+    background: #2a2a2a;
+    border-color: #3a3a3a;
+  }
+
+  .book-page--empty {
+    background: #222;
+  }
+
+  .card-compact--owned {
+    background: #1e1e1e;
+    border-color: #66bb6a;
+  }
+
+  .card-compact--placeholder {
+    background: #252525;
+    border-color: #444;
+  }
+
+  .card-compact__name--de {
+    color: #e0e0e0;
+  }
+
+  .card-compact__name--en {
+    color: #a0a0a0;
+  }
+
+  .card-compact__meta,
+  .card-compact__id,
+  .card-compact__placeholder-text {
+    color: #757575;
+  }
+
+  .card-compact__placeholder-icon {
+    color: #555;
+  }
+
+  .card-dialog-image {
+    background: #333;
+  }
+}
+
+/* ==================== Expansion Management Styles ==================== */
+
+.expansion-manager {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-color, #ddd);
+}
+
+.expansion-manager-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: var(--text-color, #333);
+}
+
+.expansion-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.expansion-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background: var(--card-bg, #f5f5f5);
+  border: 1px solid var(--border-color, #e0e0e0);
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+
+.expansion-item:hover {
+  background: var(--card-hover-bg, #eeeeee);
+}
+
+.expansion-item-info {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.expansion-name {
+  font-weight: 500;
+  color: var(--text-color, #333);
+}
+
+.expansion-card-num {
+  color: var(--text-secondary, #666);
+  font-size: 0.9rem;
+}
+
+.expansion-selector {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: var(--input-bg, #f9f9f9);
+  border: 1px solid var(--border-color, #ddd);
+  border-radius: 6px;
+}
+
+.expansion-selector h4 {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-color, #333);
+}
+
+.expansion-dropdown,
+.card-number-input {
+  width: 100%;
+  padding: 0.6rem;
+  margin-bottom: 0.75rem;
+  border: 1px solid var(--border-color, #ccc);
+  border-radius: 4px;
+  font-size: 0.95rem;
+  background: var(--input-bg, white);
+  color: var(--text-color, #333);
+  transition: border-color 0.2s;
+}
+
+.expansion-dropdown:focus,
+.card-number-input:focus {
+  outline: none;
+  border-color: var(--primary-color, #2196f3);
+}
+
+.btn-add-expansion {
+  width: 100%;
+  padding: 0.6rem;
+  background: var(--btn-secondary-bg, #4caf50);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-add-expansion:hover {
+  background: var(--btn-secondary-hover, #45a049);
+}
+
+.btn-delete-expansion {
+  padding: 0.4rem 0.8rem;
+  background: var(--btn-danger-bg, #f44336);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-delete-expansion:hover {
+  background: var(--btn-danger-hover, #da190b);
+}
+
+.expansion-error {
+  padding: 0.75rem;
+  margin-top: 1rem;
+  background: #ffebee;
+  color: #c62828;
+  border: 1px solid #ef9a9a;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.card-dialog-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.card-dialog-actions button {
+  flex: 1;
+}
+
+/* Clickable Card Hover Effect */
+.card-clickable {
+  cursor: pointer;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
+}
+
+.card-clickable:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Dark Mode for Expansion Management */
+@media (prefers-color-scheme: dark) {
+  .expansion-manager {
+    border-top-color: #3a3a3a;
+  }
+
+  .expansion-manager-title {
+    color: #e0e0e0;
+  }
+
+  .expansion-item {
+    background: #2a2a2a;
+    border-color: #3a3a3a;
+  }
+
+  .expansion-item:hover {
+    background: #333;
+  }
+
+  .expansion-name {
+    color: #e0e0e0;
+  }
+
+  .expansion-card-num {
+    color: #a0a0a0;
+  }
+
+  .expansion-selector {
+    background: #2a2a2a;
+    border-color: #3a3a3a;
+  }
+
+  .expansion-selector h4 {
+    color: #e0e0e0;
+  }
+
+  .expansion-dropdown,
+  .card-number-input {
+    background: #1e1e1e;
+    border-color: #444;
+    color: #e0e0e0;
+  }
+
+  .expansion-error {
+    background: #4a1a1a;
+    color: #ff6b6b;
+    border-color: #6a2a2a;
   }
 }
