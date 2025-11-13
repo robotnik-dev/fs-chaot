@@ -3,11 +3,13 @@ use crate::{
         delete_all_card_expansions_db, get_all_expansions_db, get_card_expansions_db, save_card_db,
         save_card_expansion_db, update_card_db,
     },
-    card::{Bool, Card},
+    card::{Bool, Card, Rarity},
     components::{DialogContent, DialogRoot, DialogTitle},
     expansion::{CardExpansion, Expansion},
+    utils::get_highest_rarity,
 };
 use dioxus::prelude::*;
+use strum::IntoEnumIterator;
 
 #[derive(Clone, PartialEq)]
 pub enum DialogMode {
@@ -16,11 +18,12 @@ pub enum DialogMode {
     Edit,
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Default, Clone, PartialEq)]
 pub struct ExpansionEntry {
     pub id: Option<usize>, // None for new entries
     pub expansion_id: usize,
     pub card_number: String,
+    pub rarity: Rarity,
 }
 
 #[component]
@@ -31,14 +34,28 @@ pub fn CardOwnershipDialog(
     on_change: EventHandler<Card>,
 ) -> Element {
     let mut all_expansions = use_signal(Vec::<Expansion>::new);
+    let mut all_rarities = use_signal(Vec::<Rarity>::new);
     let mut loading_expansions = use_signal(|| false);
     let mut error_message = use_signal(String::new);
     let mut is_submitting = use_signal(|| false);
     let mut card_expansions = use_signal(Vec::<ExpansionEntry>::new);
+    let mut highest_rarity = use_signal(Rarity::default);
 
     // New expansion form state
     let mut new_expansion_id = use_signal(|| None::<usize>);
     let mut new_card_number = use_signal(String::new);
+    let mut new_rarity = use_signal(|| Rarity::Common);
+
+    // Load all rarities on mount
+    use_effect(move || {
+        spawn(async move {
+            let mut rarities = vec![];
+            for rarity in Rarity::iter() {
+                rarities.push(rarity);
+            }
+            all_rarities.set(rarities);
+        });
+    });
 
     // Load all expansions on mount
     use_effect(move || {
@@ -69,9 +86,13 @@ pub fn CardOwnershipDialog(
                                 id: ce.id,
                                 expansion_id: ce.expansion_id,
                                 card_number: ce.card_number,
+                                rarity: ce.rarity,
                             })
                             .collect();
                         card_expansions.set(entries);
+                        // set highest rarity
+                        let rarity = get_highest_rarity(index).await;
+                        highest_rarity.set(rarity);
                     }
                     Err(e) => {
                         error_message.set(format!("Failed to load card expansions: {}", e));
@@ -88,16 +109,28 @@ pub fn CardOwnershipDialog(
                 let mut expansions = card_expansions.read().clone();
 
                 // Check for duplicates
-                if expansions.iter().any(|e| e.expansion_id == exp_id) {
-                    error_message.set("This expansion is already added".to_string());
-                    return;
+                if let Some((index, _)) = expansions
+                    .iter()
+                    .enumerate()
+                    .find(|(_, ex)| ex.expansion_id == exp_id)
+                {
+                    let ex = expansions.swap_remove(index);
+                    let entry = ExpansionEntry {
+                        card_number: new_card_number(),
+                        rarity: new_rarity(),
+                        ..ex
+                    };
+                    expansions.push(entry);
+                } else {
+                    // push new expansion
+                    expansions.push(ExpansionEntry {
+                        id: None,
+                        expansion_id: exp_id,
+                        card_number: new_card_number(),
+                        rarity: new_rarity(),
+                    });
                 }
 
-                expansions.push(ExpansionEntry {
-                    id: None,
-                    expansion_id: exp_id,
-                    card_number: new_card_number(),
-                });
                 card_expansions.set(expansions);
 
                 // Reset form
@@ -166,6 +199,7 @@ pub fn CardOwnershipDialog(
                     card_id: card.cloned().index.0,
                     expansion_id: entry.expansion_id,
                     card_number: entry.card_number.clone(),
+                    rarity: entry.rarity.clone(),
                 };
 
                 if let Err(e) = save_card_expansion_db(card_expansion).await {
@@ -250,6 +284,9 @@ pub fn CardOwnershipDialog(
                     // Card Info
                     div { class: "card-dialog-info",
                         div { "ID: #{card.cloned().index}" }
+                        if !matches!(mode, DialogMode::Read) {
+                            div { "Rarity: {highest_rarity.cloned()}" }
+                        }
                     }
                     if !matches!(mode, DialogMode::Read) {
                         div { class: "expansion-manager",
@@ -267,6 +304,7 @@ pub fn CardOwnershipDialog(
                                                 span { class: "expansion-card-num",
                                                     " - Card #{entry.card_number}"
                                                 }
+                                                span { class: "expansion-card-num", " - {entry.rarity}" }
                                             }
                                         }
                                         if matches!(mode, DialogMode::Edit) {
@@ -308,6 +346,20 @@ pub fn CardOwnershipDialog(
                                         placeholder: "Card number (e.g., 25/102)",
                                         value: "{new_card_number()}",
                                         oninput: move |evt| new_card_number.set(evt.value()),
+                                    }
+
+                                    select {
+                                        class: "rarity-dropdown",
+                                        value: new_rarity().to_string(),
+                                        onchange: move |evt| {
+                                            if let Ok(rarity) = evt.value().parse::<Rarity>() {
+                                                new_rarity.set(rarity);
+                                            }
+                                        },
+                                        option { value: "", "Select rarity..." }
+                                        for rarity in all_rarities().iter() {
+                                            option { value: "{rarity}", "{rarity}" }
+                                        }
                                     }
 
                                     button {

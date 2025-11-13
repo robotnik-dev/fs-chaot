@@ -8,6 +8,7 @@ mod csv_record;
 mod expansion;
 mod logging;
 mod pokeapi;
+mod utils;
 
 pub const BASE_URL: &str = "https://pokeapi.co/api/v2/pokemon/";
 pub const LANGUAGE_URL: &str = "https://raw.githubusercontent.com/PokeAPI/pokeapi/refs/heads/master/data/v2/csv/pokemon_species_names.csv";

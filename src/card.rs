@@ -5,7 +5,11 @@ use rusqlite::{
     types::{FromSql, FromSqlResult, ToSqlOutput},
     ToSql,
 };
-use std::fmt::Display;
+use std::{
+    fmt::{Display, Error},
+    str::FromStr,
+};
+use strum::EnumIter;
 
 #[derive(Default, Debug, Clone, serde::Deserialize, serde::Serialize, PartialEq)]
 pub struct Card {
@@ -65,7 +69,18 @@ impl Card {
     }
 }
 
-#[derive(Default, Debug, Clone, serde::Deserialize, serde::Serialize, PartialEq)]
+#[derive(
+    Default,
+    Debug,
+    Clone,
+    serde::Deserialize,
+    serde::Serialize,
+    PartialEq,
+    EnumIter,
+    Ord,
+    Eq,
+    PartialOrd,
+)]
 pub enum Rarity {
     #[default]
     Common,
@@ -85,6 +100,21 @@ impl Display for Rarity {
             Self::HoloRare => f.write_str("Holo Rare ★H"),
             Self::UltraRare => f.write_str("Ultra Rare"),
             Self::SecretRare => f.write_str("Secret Rare"),
+        }
+    }
+}
+
+impl FromStr for Rarity {
+    type Err = Error;
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        match s {
+            "Common ●" => Ok(Self::Common),
+            "Uncommon ♦" => Ok(Self::Uncommon),
+            "Rare ★" => Ok(Self::Rare),
+            "Holo Rare ★H" => Ok(Self::HoloRare),
+            "Ultra Rare" => Ok(Self::UltraRare),
+            "Secret Rare" => Ok(Self::SecretRare),
+            _ => Ok(Self::Common),
         }
     }
 }

@@ -1,5 +1,5 @@
 use crate::{
-    backend::get_all_owned_cards_db,
+    backend::{get_all_owned_cards_db, get_card_by_id_remote, save_card_db},
     card::{Card, Index, Page},
     components::{
         BookNavigation, CardOwnershipDialog, CardViewCompact, DialogContent, DialogDescription,
@@ -66,20 +66,18 @@ pub fn Collection() -> Element {
             // Fetch from remote
             loading_card.set(true);
             spawn(async move {
-                match Index::try_new(index) {
-                    Ok(idx) => match Card::try_from_index(idx).await {
-                        Ok(card) => {
-                            temp_card.set(card);
-                            loading_card.set(false);
-                        }
-                        Err(e) => {
-                            error_message.set(format!("Failed to fetch card: {}", e));
+                match get_card_by_id_remote(index).await {
+                    Ok(card) => {
+                        temp_card.set(card.clone());
+                        loading_card.set(false);
+                        if let Err(e) = save_card_db(card.clone()).await {
+                            error_message.set(format!("Failed to save card: {}", e));
                             loading_card.set(false);
                             dialog_open.set(false);
                         }
-                    },
+                    }
                     Err(e) => {
-                        error_message.set(format!("Invalid card ID: {}", e));
+                        error_message.set(format!("Failed to fetch card: {}", e));
                         loading_card.set(false);
                         dialog_open.set(false);
                     }

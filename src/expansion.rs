@@ -5,6 +5,8 @@ use rusqlite::{
 };
 use std::fmt::Display;
 
+use crate::card::Rarity;
+
 #[derive(Default, Debug, Clone, serde::Deserialize, serde::Serialize, PartialEq)]
 pub struct Expansion {
     pub id: usize,
@@ -26,6 +28,7 @@ pub struct CardExpansion {
     pub card_id: usize,
     pub expansion_id: usize,
     pub card_number: String,
+    pub rarity: Rarity,
 }
 
 impl CardExpansion {
