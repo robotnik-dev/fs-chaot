@@ -44,8 +44,6 @@ thread_local! {
                 card_id INTEGER NOT NULL,
                 expansion_id INTEGER NOT NULL,
                 card_number TEXT NOT NULL,
-                rarity TEXT NOT NULL DEFAULT 'Common ●',
-                is_secret BOOLEAN NOT NULL DEFAULT 0 CHECK (is_secret IN (0,1)),
                 created_at DATETIME DEFAULT (datetime('now', 'localtime')),
                 FOREIGN KEY (card_id) REFERENCES cards(id) ON DELETE CASCADE,
                 FOREIGN KEY (expansion_id) REFERENCES expansions(id) ON DELETE CASCADE,
@@ -298,7 +296,7 @@ pub async fn get_card_expansions_db(card_id: usize) -> Result<Vec<CardExpansion>
     info!("get card expansions from DB for card_id: {}", card_id);
     DB.with(|db| {
         let mut stmt = db.prepare(
-            "SELECT id, card_id, expansion_id, card_number, rarity, is_secret FROM card_expansions WHERE card_id = ?",
+            "SELECT id, card_id, expansion_id, card_number FROM card_expansions WHERE card_id = ?",
         )?;
 
         let card_expansions = stmt
@@ -308,8 +306,6 @@ pub async fn get_card_expansions_db(card_id: usize) -> Result<Vec<CardExpansion>
                     card_id: row.get(1)?,
                     expansion_id: row.get(2)?,
                     card_number: row.get(3)?,
-                    rarity: row.get(4)?,
-                    is_secret: row.get::<_, i64>(5)? == 1,
                 })
             })?
             .collect::<Result<Vec<CardExpansion>, rusqlite::Error>>()?;
@@ -330,13 +326,11 @@ pub async fn save_card_expansion_db(card_expansion: CardExpansion) -> Result<(),
     info!("save card expansion to DB: {card_expansion:#?}");
     DB.with(|f| {
         f.execute(
-            "INSERT INTO card_expansions (card_id, expansion_id, card_number, rarity, is_secret) VALUES (?1, ?2, ?3, ?4, ?5)",
+            "INSERT INTO card_expansions (card_id, expansion_id, card_number) VALUES (?1, ?2, ?3)",
             params![
                 card_expansion.card_id,
                 card_expansion.expansion_id,
                 card_expansion.card_number,
-                card_expansion.rarity,
-                if card_expansion.is_secret { 1 } else { 0 }
             ],
         )
     })
@@ -364,14 +358,8 @@ pub async fn update_card_expansion_db(card_expansion: CardExpansion) -> Result<(
 
     DB.with(|f| {
         f.execute(
-            "UPDATE card_expansions SET expansion_id = ?1, card_number = ?2, rarity = ?3, is_secret = ?4 WHERE id = ?5",
-            params![
-                card_expansion.expansion_id,
-                card_expansion.card_number,
-                card_expansion.rarity,
-                if card_expansion.is_secret { 1 } else { 0 },
-                card_expansion.id.unwrap()
-            ],
+            "UPDATE card_expansions SET expansion_id = ?1, card_number = ?2 WHERE id = ?5",
+            params![card_expansion.expansion_id, card_expansion.card_number,],
         )
     })
     .map_err(|err| ServerFnError::ServerError {

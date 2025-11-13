@@ -11,28 +11,30 @@ use dioxus::prelude::*;
 
 #[derive(Clone, PartialEq)]
 pub enum DialogMode {
-    AddAndRemove, // All views - can add or remove owned cards
+    Read,
+    Add,
+    Edit,
 }
 
 #[derive(Clone, PartialEq)]
-struct ExpansionEntry {
-    id: Option<usize>, // None for new entries
-    expansion_id: usize,
-    card_number: String,
+pub struct ExpansionEntry {
+    pub id: Option<usize>, // None for new entries
+    pub expansion_id: usize,
+    pub card_number: String,
 }
 
 #[component]
 pub fn CardOwnershipDialog(
-    card: Signal<Option<Card>>,
+    card: Signal<Card>,
     dialog_open: Signal<bool>,
     mode: DialogMode,
     on_change: EventHandler<Card>,
 ) -> Element {
     let mut all_expansions = use_signal(Vec::<Expansion>::new);
-    let mut card_expansions = use_signal(Vec::<ExpansionEntry>::new);
     let mut loading_expansions = use_signal(|| false);
     let mut error_message = use_signal(String::new);
     let mut is_submitting = use_signal(|| false);
+    let mut card_expansions = use_signal(Vec::<ExpansionEntry>::new);
 
     // New expansion form state
     let mut new_expansion_id = use_signal(|| None::<usize>);
@@ -56,35 +58,26 @@ pub fn CardOwnershipDialog(
 
     // Load card expansions when dialog opens
     use_effect(move || {
-        if dialog_open() {
-            if let Some(c) = card.read().clone() {
-                if c.owned.0 {
-                    spawn(async move {
-                        match get_card_expansions_db(c.index.0).await {
-                            Ok(expansions) => {
-                                let entries: Vec<ExpansionEntry> = expansions
-                                    .into_iter()
-                                    .map(|ce| ExpansionEntry {
-                                        id: ce.id,
-                                        expansion_id: ce.expansion_id,
-                                        card_number: ce.card_number,
-                                    })
-                                    .collect();
-                                card_expansions.set(entries);
-                            }
-                            Err(e) => {
-                                error_message.set(format!("Failed to load card expansions: {}", e));
-                            }
-                        }
-                    });
+        if card.cloned().owned.0 {
+            spawn(async move {
+                let index = card.peek().index.0;
+                match get_card_expansions_db(index).await {
+                    Ok(expansions) => {
+                        let entries: Vec<ExpansionEntry> = expansions
+                            .into_iter()
+                            .map(|ce| ExpansionEntry {
+                                id: ce.id,
+                                expansion_id: ce.expansion_id,
+                                card_number: ce.card_number,
+                            })
+                            .collect();
+                        card_expansions.set(entries);
+                    }
+                    Err(e) => {
+                        error_message.set(format!("Failed to load card expansions: {}", e));
+                    }
                 }
-            }
-        } else {
-            // Reset form when dialog closes
-            card_expansions.set(Vec::new());
-            new_expansion_id.set(None);
-            new_card_number.set(String::new());
-            error_message.set(String::new());
+            });
         }
     });
 
@@ -143,91 +136,93 @@ pub fn CardOwnershipDialog(
             return;
         }
 
-        if let Some(mut c) = card.read().clone() {
-            is_submitting.set(true);
-            c.owned = Bool(true);
+        is_submitting.set(true);
+        card.write().owned = Bool(true);
+        let card_clone = card.read().clone();
 
-            let card_clone = c.clone();
-            let expansions_clone = card_expansions();
+        let expansions_clone = card_expansions();
 
-            spawn(async move {
-                // Save or update card
-                let save_result = save_card_db(card_clone.clone()).await;
+        spawn(async move {
+            // Save or update card
+            let save_result = save_card_db(card_clone.clone()).await;
 
-                if let Err(e) = save_result {
-                    error_message.set(format!("Failed to save card: {}", e));
-                    is_submitting.set(false);
-                    return;
-                }
-
-                // Delete all existing expansions for this card
-                if let Err(e) = delete_all_card_expansions_db(card_clone.index.0).await {
-                    error_message.set(format!("Failed to delete expansions: {}", e));
-                    is_submitting.set(false);
-                    return;
-                }
-
-                // Insert all expansions from the current list
-                for entry in expansions_clone.iter() {
-                    let card_expansion = CardExpansion {
-                        id: None, // Always insert as new (id will be auto-generated)
-                        card_id: card_clone.index.0,
-                        expansion_id: entry.expansion_id,
-                        card_number: entry.card_number.clone(),
-                    };
-
-                    if let Err(e) = save_card_expansion_db(card_expansion).await {
-                        error_message.set(format!("Failed to save expansion: {}", e));
-                        is_submitting.set(false);
-                        return;
-                    }
-                }
-
-                // Success
+            if let Err(e) = save_result {
+                error_message.set(format!("Failed to save card: {}", e));
                 is_submitting.set(false);
-                dialog_open.set(false);
-                on_change.call(card_clone);
-            });
-        }
+                return;
+            }
+
+            // Delete all existing expansions for this card
+            if let Err(e) = delete_all_card_expansions_db(card.cloned().index.0).await {
+                error_message.set(format!("Failed to delete expansions: {}", e));
+                is_submitting.set(false);
+                return;
+            }
+
+            // Insert all expansions from the current list
+            for entry in expansions_clone.iter() {
+                let card_expansion = CardExpansion {
+                    id: None, // Always insert as new (id will be auto-generated)
+                    card_id: card.cloned().index.0,
+                    expansion_id: entry.expansion_id,
+                    card_number: entry.card_number.clone(),
+                };
+
+                if let Err(e) = save_card_expansion_db(card_expansion).await {
+                    error_message.set(format!("Failed to save expansion: {}", e));
+                    is_submitting.set(false);
+                    return;
+                }
+            }
+
+            // Success
+            is_submitting.set(false);
+            dialog_open.set(false);
+            on_change.call(card.cloned());
+        });
     };
 
     // Handle remove from collection
     let handle_remove_from_collection = move |_| {
-        if let Some(mut c) = card.read().clone() {
-            is_submitting.set(true);
-            c.owned = Bool(false);
+        is_submitting.set(true);
+        card.write().owned = Bool(false);
 
-            let card_clone = c.clone();
+        spawn(async move {
+            // Delete all expansion associations
+            let delete_result = delete_all_card_expansions_db(card.cloned().index.0).await;
 
-            spawn(async move {
-                // Delete all expansion associations
-                let delete_result = delete_all_card_expansions_db(card_clone.index.0).await;
-
-                if let Err(e) = delete_result {
-                    error_message.set(format!("Failed to delete expansions: {}", e));
-                    is_submitting.set(false);
-                    return;
-                }
-
-                // Update card to owned=false
-                let update_result = update_card_db(card_clone.clone()).await;
-
-                if let Err(e) = update_result {
-                    error_message.set(format!("Failed to update card: {}", e));
-                    is_submitting.set(false);
-                    return;
-                }
-
-                // Success
+            if let Err(e) = delete_result {
+                error_message.set(format!("Failed to delete expansions: {}", e));
                 is_submitting.set(false);
-                dialog_open.set(false);
-                on_change.call(card_clone);
-            });
-        }
+                return;
+            }
+
+            // Update card to owned=false
+            let update_result = update_card_db(card.cloned()).await;
+
+            if let Err(e) = update_result {
+                error_message.set(format!("Failed to update card: {}", e));
+                is_submitting.set(false);
+                return;
+            }
+
+            // Success
+            is_submitting.set(false);
+            dialog_open.set(false);
+            on_change.call(card.cloned());
+        });
     };
 
     rsx! {
-        DialogRoot { open: dialog_open(), on_open_change: move |v| dialog_open.set(v),
+        DialogRoot {
+            open: dialog_open(),
+            on_open_change: move |v| {
+                dialog_open.set(v);
+                card_expansions.set(Vec::new());
+                new_expansion_id.set(None);
+                new_card_number.set(String::new());
+                error_message.set(String::new());
+            },
             DialogContent {
                 button {
                     class: "dialog-close",
@@ -239,96 +234,91 @@ pub fn CardOwnershipDialog(
 
                 DialogTitle { "Card Details" }
 
-                if let Some(c) = card.read().clone() {
-                    div { class: "card-dialog-content",
-                        // Card Image
-                        div { class: "card-dialog-image",
-                            img { src: "{c.img_url}", alt: "{c.name_en}" }
+                div { class: "card-dialog-content",
+                    // Card Image
+                    div { class: "card-dialog-image",
+                        img {
+                            src: "{card.cloned().img_url}",
+                            alt: "{card.cloned().name_en}",
                         }
+                    }
 
-                        // Card Names
-                        div { class: "card-dialog-name-de", "{c.name_de}" }
-                        div { class: "card-dialog-name-en", "{c.name_en}" }
+                    // Card Names
+                    div { class: "card-dialog-name-de", "{card.cloned().name_de}" }
+                    div { class: "card-dialog-name-en", "{card.cloned().name_en}" }
 
-                        // Card Info
-                        div { class: "card-dialog-info",
-                            div { "ID: #{c.index}" }
-                            div { "Rarity: {c.rarity}" }
-                        }
+                    // Card Info
+                    div { class: "card-dialog-info",
+                        div { "ID: #{card.cloned().index}" }
+                    }
+                    if !matches!(mode, DialogMode::Read) {
+                        div { class: "expansion-manager",
+                            h3 { class: "expansion-manager-title", "Expansions" }
 
-                        // Expansion Management (only for AddAndRemove mode or if owned)
-                        if matches!(mode, DialogMode::AddAndRemove) || c.owned.0 {
-                            div { class: "expansion-manager",
-                                h3 { class: "expansion-manager-title", "Expansions" }
-
-                                // Current expansions list
-                                if !card_expansions().is_empty() {
-                                    div { class: "expansion-list",
-                                        for (index , entry) in card_expansions().iter().enumerate() {
-                                            div {
-                                                class: "expansion-item",
-                                                key: "{index}",
-                                                div { class: "expansion-item-info",
-                                                    if let Some(exp) = all_expansions().iter().find(|e| e.id == entry.expansion_id) {
-                                                        span { class: "expansion-name",
-                                                            "{exp.name}"
-                                                        }
-                                                        span { class: "expansion-card-num",
-                                                            " - Card #{entry.card_number}"
-                                                        }
-                                                    }
-                                                }
-                                                button {
-                                                    class: "btn-delete-expansion",
-                                                    r#type: "button",
-                                                    onclick: move |_| remove_expansion(index),
-                                                    "Remove"
+                            // Current expansions list
+                            div { class: "expansion-list",
+                                for (index , entry) in card_expansions().iter().enumerate() {
+                                    div {
+                                        class: "expansion-item",
+                                        key: "{index}",
+                                        div { class: "expansion-item-info",
+                                            if let Some(exp) = all_expansions().iter().find(|e| e.id == entry.expansion_id) {
+                                                span { class: "expansion-name", "{exp.name}" }
+                                                span { class: "expansion-card-num",
+                                                    " - Card #{entry.card_number}"
                                                 }
                                             }
                                         }
-                                    }
-                                }
-
-                                // Add new expansion form (only if not owned or in AddAndRemove mode)
-                                if matches!(mode, DialogMode::AddAndRemove) || c.owned.0 {
-                                    div { class: "expansion-selector",
-                                        h4 { "Add Expansion" }
-
-                                        select {
-                                            class: "expansion-dropdown",
-                                            value: new_expansion_id().map(|id| id.to_string()).unwrap_or_default(),
-                                            onchange: move |evt| {
-                                                if let Ok(id) = evt.value().parse::<usize>() {
-                                                    new_expansion_id.set(Some(id));
-                                                } else {
-                                                    new_expansion_id.set(None);
-                                                }
-                                            },
-                                            option { value: "", "Select expansion..." }
-                                            for expansion in all_expansions().iter() {
-                                                option { value: "{expansion.id}", "{expansion.name}" }
+                                        if matches!(mode, DialogMode::Edit) {
+                                            button {
+                                                class: "btn-delete-expansion",
+                                                r#type: "button",
+                                                onclick: move |_| remove_expansion(index),
+                                                "Remove"
                                             }
-                                        }
-
-                                        input {
-                                            class: "card-number-input",
-                                            r#type: "text",
-                                            placeholder: "Card number (e.g., 25/102)",
-                                            value: "{new_card_number()}",
-                                            oninput: move |evt| new_card_number.set(evt.value()),
-                                        }
-
-                                        button {
-                                            class: "btn-add-expansion",
-                                            r#type: "button",
-                                            onclick: add_expansion,
-                                            "+ Add Expansion"
                                         }
                                     }
                                 }
                             }
-                        }
 
+                            // Add new expansion form
+                            if matches!(mode, DialogMode::Add) || matches!(mode, DialogMode::Edit) {
+                                div { class: "expansion-selector",
+                                    h4 { "Add Expansion" }
+
+                                    select {
+                                        class: "expansion-dropdown",
+                                        value: new_expansion_id().map(|id| id.to_string()).unwrap_or_default(),
+                                        onchange: move |evt| {
+                                            if let Ok(id) = evt.value().parse::<usize>() {
+                                                new_expansion_id.set(Some(id));
+                                            } else {
+                                                new_expansion_id.set(None);
+                                            }
+                                        },
+                                        option { value: "", "Select expansion..." }
+                                        for expansion in all_expansions().iter() {
+                                            option { value: "{expansion.id}", "{expansion.name}" }
+                                        }
+                                    }
+
+                                    input {
+                                        class: "card-number-input",
+                                        r#type: "text",
+                                        placeholder: "Card number (e.g., 25/102)",
+                                        value: "{new_card_number()}",
+                                        oninput: move |evt| new_card_number.set(evt.value()),
+                                    }
+
+                                    button {
+                                        class: "btn-add-expansion",
+                                        r#type: "button",
+                                        onclick: add_expansion,
+                                        "+ Add Expansion"
+                                    }
+                                }
+                            }
+                        }
                         // Error message
                         if !error_message().is_empty() {
                             div { class: "expansion-error", "{error_message()}" }
@@ -336,8 +326,8 @@ pub fn CardOwnershipDialog(
 
                         // Action buttons
                         div { class: "card-dialog-actions",
-                            // Add to Collection button (only in AddAndRemove mode and not owned)
-                            if matches!(mode, DialogMode::AddAndRemove) && !c.owned.0 {
+                            // Add to Collection button
+                            if matches!(mode, DialogMode::Add) {
                                 button {
                                     class: "btn-add",
                                     disabled: is_submitting(),
@@ -350,8 +340,8 @@ pub fn CardOwnershipDialog(
                                 }
                             }
 
-                            // Save Changes button (if owned and has expansions)
-                            if c.owned.0 && matches!(mode, DialogMode::AddAndRemove) {
+                            // Save Changes and Remove from Collection button
+                            if matches!(mode, DialogMode::Edit) {
                                 button {
                                     class: "btn-add",
                                     disabled: is_submitting() || card_expansions().is_empty(),
@@ -362,10 +352,6 @@ pub fn CardOwnershipDialog(
                                         "Save Changes"
                                     }
                                 }
-                            }
-
-                            // Remove from Collection button
-                            if c.owned.0 {
                                 button {
                                     class: "btn-remove",
                                     disabled: is_submitting(),

@@ -2,8 +2,7 @@ use crate::{
     backend::get_all_owned_cards_db,
     card::{Card, Index, Page},
     components::{
-        BookNavigation, CardOwnershipDialog, CardViewCompact, DialogContent, DialogDescription,
-        DialogMode, DialogRoot, DialogTitle, PlaceholderCard,
+        BookNavigation, CardOwnershipDialog, CardViewCompact, DialogContent, DialogDescription, DialogMode, DialogRoot, DialogTitle, PlaceholderCard
     },
     CARDS_PER_PAGE,
 };
@@ -21,7 +20,7 @@ pub fn Collection() -> Element {
     let mut selected_index = use_signal(|| None::<usize>);
     let mut error_message = use_signal(String::new);
     let mut loading_card = use_signal(|| false);
-    let mut temp_card = use_signal(|| None::<Card>);
+    let mut temp_card = use_signal(Card::default);
 
     // Check if mobile viewport
     let is_mobile = use_signal(|| {
@@ -61,7 +60,7 @@ pub fn Collection() -> Element {
 
         // Check if card is owned
         if let Some(card) = owned_cards.read().get(&index) {
-            temp_card.set(Some(card.clone()));
+            temp_card.set(card.clone());
         } else {
             // Fetch from remote
             loading_card.set(true);
@@ -69,7 +68,7 @@ pub fn Collection() -> Element {
                 match Index::try_new(index) {
                     Ok(idx) => match Card::try_from_index(idx).await {
                         Ok(card) => {
-                            temp_card.set(Some(card));
+                            temp_card.set(card);
                             loading_card.set(false);
                         }
                         Err(e) => {
@@ -172,6 +171,8 @@ pub fn Collection() -> Element {
         }
     };
 
+    let is_owned = move || temp_card.read().clone().owned.0;
+
     rsx! {
         div { class: "collection-container",
             BookNavigation {
@@ -213,7 +214,7 @@ pub fn Collection() -> Element {
             CardOwnershipDialog {
                 card: temp_card,
                 dialog_open,
-                mode: DialogMode::AddAndRemove,
+                mode: if is_owned() { DialogMode::Edit } else { DialogMode::Read },
                 on_change: handle_ownership_change,
             }
 

@@ -12,7 +12,7 @@ pub fn History() -> Element {
     let cards = use_loader(get_cards_with_timestamp_db)?;
 
     let mut dialog_open = use_signal(|| false);
-    let mut selected_card = use_signal(|| None::<Card>);
+    let mut selected_card = use_signal(Card::default);
     let mut loading_card = use_signal(|| false);
     let mut error_message = use_signal(String::new);
 
@@ -25,7 +25,7 @@ pub fn History() -> Element {
             // Try to get card from DB first
             match get_card_by_id_db(index).await {
                 Ok(card) => {
-                    selected_card.set(Some(card));
+                    selected_card.set(card);
                     loading_card.set(false);
                 }
                 Err(_) => {
@@ -33,7 +33,7 @@ pub fn History() -> Element {
                     match Index::try_new(index) {
                         Ok(idx) => match get_card_by_id_remote(idx.0).await {
                             Ok(card) => {
-                                selected_card.set(Some(card));
+                                selected_card.set(card);
                                 loading_card.set(false);
                             }
                             Err(e) => {
@@ -73,6 +73,8 @@ pub fn History() -> Element {
         *CARDS.write() = cards_list;
     };
 
+    let is_owned = move || selected_card.read().clone().owned.0;
+
     rsx! {
         div { class: "card-container",
             {
@@ -91,7 +93,7 @@ pub fn History() -> Element {
         CardOwnershipDialog {
             card: selected_card,
             dialog_open,
-            mode: DialogMode::AddAndRemove,
+            mode: if is_owned() { DialogMode::Edit } else { DialogMode::Add },
             on_change: handle_ownership_change,
         }
     }

@@ -20,33 +20,18 @@ impl Display for Expansion {
     }
 }
 
-#[derive(Debug, Clone, serde::Deserialize, serde::Serialize, PartialEq)]
+#[derive(Default, Debug, Clone, serde::Deserialize, serde::Serialize, PartialEq)]
 pub struct CardExpansion {
     pub id: Option<usize>, // None for new entries (auto-increment)
     pub card_id: usize,
     pub expansion_id: usize,
     pub card_number: String,
-    pub rarity: crate::card::Rarity,
-    pub is_secret: bool,
-}
-
-impl Default for CardExpansion {
-    fn default() -> Self {
-        Self {
-            id: None,
-            card_id: 0,
-            expansion_id: 0,
-            card_number: String::new(),
-            rarity: crate::card::Rarity::Common,
-            is_secret: false,
-        }
-    }
 }
 
 impl CardExpansion {
     /// Calculates if a card is secret based on card_number and expansion.cards
     /// Returns true if card_number (as integer) > expansion.cards
-    pub fn calculate_is_secret(&self, expansion: &Expansion) -> bool {
+    pub fn is_secret(&self, expansion: &Expansion) -> bool {
         self.card_number
             .parse::<usize>()
             .map(|num| num > expansion.cards)
