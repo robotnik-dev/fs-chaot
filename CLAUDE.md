@@ -235,11 +235,13 @@ The application uses structured logging via the `tracing` crate for debugging an
 ### Log Levels
 
 **Development** (with `dev` feature):
+
 - Default: `DEBUG` level
 - Shows detailed flow including database queries and API calls
 - Excludes noisy crates: `hyper`, `tower`, `tokio`, `dioxus_core`
 
 **Production**:
+
 - Default: `INFO` level
 - Shows important events only (auth, ownership changes, errors)
 - Configure via `RUST_LOG` environment variable
@@ -247,6 +249,7 @@ The application uses structured logging via the `tracing` crate for debugging an
 ### What Gets Logged
 
 **Server-side** (`src/backend.rs`):
+
 - ✅ Server function entry/exit with parameters
 - ✅ Database operations (SELECT, INSERT, UPDATE, DELETE) with timing
 - ✅ Authentication attempts (password length only, never actual password)
@@ -255,6 +258,7 @@ The application uses structured logging via the `tracing` crate for debugging an
 - ✅ Errors with full context chain
 
 **Client-side** (`src/components/login.rs`, etc.):
+
 - ✅ Authentication flow events
 - ✅ Component errors
 
@@ -263,6 +267,7 @@ The application uses structured logging via the `tracing` crate for debugging an
 ### Usage
 
 **Development:**
+
 ```bash
 # Default DEBUG level
 pixi run serve
@@ -275,6 +280,7 @@ RUST_LOG=fs_chaot::backend=debug pixi run serve
 ```
 
 **Production:**
+
 ```bash
 # Set in Railway environment variables
 RUST_LOG=info
@@ -292,6 +298,7 @@ Three reusable macros in `src/logging.rs`:
 3. **`log_ownership_change!(card_id, old_state, new_state)`** - Tracks collection changes
 
 **Example:**
+
 ```rust
 log_server_fn!("get_card_by_id_db", card_id = 25);
 log_db_op!("SELECT", table = "cards", card_id = 25);
@@ -301,6 +308,7 @@ log_ownership_change!(25, false, true);
 ### Log Output Format
 
 Structured logs with fields for filtering:
+
 ```
 INFO fs_chaot::backend: server function called fn_name="update_card_db" card_id=25 owned=true
 INFO fs_chaot::backend: card ownership changed card_id=25 old_owned=false new_owned=true
