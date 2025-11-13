@@ -3,11 +3,18 @@ use crate::expansion::{CardExpansion, Expansion};
 use anyhow::Result;
 use dioxus::prelude::*;
 use std::collections::HashMap;
+#[cfg(feature = "server")]
+use std::fs;
 
 #[cfg(feature = "server")]
 thread_local! {
     static DB: std::sync::LazyLock<rusqlite::Connection> = std::sync::LazyLock::new(|| {
+        #[cfg(not(feature = "dev"))]
         let conn = rusqlite::Connection::open("db/production.db").expect("Failed to open database");
+
+        #[cfg(feature = "dev")]
+        fs::create_dir_all("db_dev/").unwrap();
+        let conn = rusqlite::Connection::open("db_dev/dev.db").expect("Failed to open database");
 
         conn.execute_batch(
             "CREATE TABLE IF NOT EXISTS cards (
@@ -27,6 +34,7 @@ thread_local! {
             CREATE TABLE IF NOT EXISTS expansions (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL UNIQUE,
+                abbreviation TEXT NOT NULL UNIQUE,
                 cards INTEGER NOT NULL CHECK (cards > 0),
                 secret_cards INTEGER NOT NULL CHECK (secret_cards >= 0)
             );
@@ -36,6 +44,8 @@ thread_local! {
                 card_id INTEGER NOT NULL,
                 expansion_id INTEGER NOT NULL,
                 card_number TEXT NOT NULL,
+                rarity TEXT NOT NULL DEFAULT 'Common ●',
+                is_secret BOOLEAN NOT NULL DEFAULT 0 CHECK (is_secret IN (0,1)),
                 created_at DATETIME DEFAULT (datetime('now', 'localtime')),
                 FOREIGN KEY (card_id) REFERENCES cards(id) ON DELETE CASCADE,
                 FOREIGN KEY (expansion_id) REFERENCES expansions(id) ON DELETE CASCADE,
@@ -258,16 +268,18 @@ pub async fn update_card_db(card: Card) -> Result<(), ServerFnError> {
 pub async fn get_all_expansions_db() -> Result<Vec<Expansion>, ServerFnError> {
     info!("get all expansions from DB");
     DB.with(|db| {
-        let mut stmt =
-            db.prepare("SELECT id, name, cards, secret_cards FROM expansions ORDER BY name")?;
+        let mut stmt = db.prepare(
+            "SELECT id, name, abbreviation, cards, secret_cards FROM expansions ORDER BY name",
+        )?;
 
         let expansions = stmt
             .query_map([], |row| {
                 Ok(Expansion {
                     id: row.get(0)?,
                     name: row.get(1)?,
-                    cards: row.get(2)?,
-                    secret_cards: row.get(3)?,
+                    abbreviation: row.get(2)?,
+                    cards: row.get(3)?,
+                    secret_cards: row.get(4)?,
                 })
             })?
             .collect::<Result<Vec<Expansion>, rusqlite::Error>>()?;
@@ -286,7 +298,7 @@ pub async fn get_card_expansions_db(card_id: usize) -> Result<Vec<CardExpansion>
     info!("get card expansions from DB for card_id: {}", card_id);
     DB.with(|db| {
         let mut stmt = db.prepare(
-            "SELECT id, card_id, expansion_id, card_number FROM card_expansions WHERE card_id = ?",
+            "SELECT id, card_id, expansion_id, card_number, rarity, is_secret FROM card_expansions WHERE card_id = ?",
         )?;
 
         let card_expansions = stmt
@@ -296,6 +308,8 @@ pub async fn get_card_expansions_db(card_id: usize) -> Result<Vec<CardExpansion>
                     card_id: row.get(1)?,
                     expansion_id: row.get(2)?,
                     card_number: row.get(3)?,
+                    rarity: row.get(4)?,
+                    is_secret: row.get::<_, i64>(5)? == 1,
                 })
             })?
             .collect::<Result<Vec<CardExpansion>, rusqlite::Error>>()?;
@@ -316,11 +330,13 @@ pub async fn save_card_expansion_db(card_expansion: CardExpansion) -> Result<(),
     info!("save card expansion to DB: {card_expansion:#?}");
     DB.with(|f| {
         f.execute(
-            "INSERT INTO card_expansions (card_id, expansion_id, card_number) VALUES (?1, ?2, ?3)",
+            "INSERT INTO card_expansions (card_id, expansion_id, card_number, rarity, is_secret) VALUES (?1, ?2, ?3, ?4, ?5)",
             params![
                 card_expansion.card_id,
                 card_expansion.expansion_id,
-                card_expansion.card_number
+                card_expansion.card_number,
+                card_expansion.rarity,
+                if card_expansion.is_secret { 1 } else { 0 }
             ],
         )
     })
@@ -348,10 +364,12 @@ pub async fn update_card_expansion_db(card_expansion: CardExpansion) -> Result<(
 
     DB.with(|f| {
         f.execute(
-            "UPDATE card_expansions SET expansion_id = ?1, card_number = ?2 WHERE id = ?3",
+            "UPDATE card_expansions SET expansion_id = ?1, card_number = ?2, rarity = ?3, is_secret = ?4 WHERE id = ?5",
             params![
                 card_expansion.expansion_id,
                 card_expansion.card_number,
+                card_expansion.rarity,
+                if card_expansion.is_secret { 1 } else { 0 },
                 card_expansion.id.unwrap()
             ],
         )

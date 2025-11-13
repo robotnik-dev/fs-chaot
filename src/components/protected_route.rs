@@ -1,17 +1,26 @@
 use super::NavBar;
-use crate::{Route, IS_AUTHENTICATED};
+use crate::IS_AUTHENTICATED;
 use dioxus::prelude::*;
 
 #[component]
 pub fn ProtectedRoute() -> Element {
-    let nav = use_navigator();
+    #[cfg(feature = "dev")]
+    {
+        use_effect(move || {
+            *IS_AUTHENTICATED.write() = true;
+        });
+    }
 
     // Check authentication on mount and whenever it changes
-    use_effect(move || {
-        if !*IS_AUTHENTICATED.read() {
-            nav.push(Route::Login);
-        }
-    });
+    #[cfg(not(feature = "dev"))]
+    {
+        let nav = use_navigator();
+        use_effect(move || {
+            if !*IS_AUTHENTICATED.read() {
+                nav.push(Route::Login);
+            }
+        });
+    }
 
     // Only render children if authenticated
     if *IS_AUTHENTICATED.read() {

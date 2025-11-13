@@ -3,9 +3,17 @@ use dioxus::prelude::*;
 
 #[component]
 pub fn Login() -> Element {
+    let nav = use_navigator();
+    // when in dev mode, navigate to Home
+    #[cfg(feature = "dev")]
+    {
+        use_effect(move || {
+            debug!("Navigate to home");
+            nav.push(Route::Home);
+        });
+    }
     let mut password = use_signal(String::new);
     let mut error = use_signal(String::new);
-    let nav = use_navigator();
 
     // If already authenticated, redirect to home
     use_effect(move || {

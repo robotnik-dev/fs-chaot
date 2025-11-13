@@ -7,6 +7,7 @@ services:
       - "8080:8080"
     volumes:
       - ./db:/usr/local/app/db
+    read_only: false
     environment:
       APP_PASSWORD: ${APP_PASSWORD}
       DOCKER_BUILDKIT: 1
