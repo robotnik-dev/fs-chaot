@@ -173,6 +173,7 @@ Default features: `["web", "server"]`
 ## Environment Variables
 
 - `APP_PASSWORD` - Required for authentication (server-side validation)
+- `RUST_LOG` - Controls logging verbosity (see Logging section below)
 
 ## Testing
 
@@ -220,6 +221,95 @@ The collection view (`/collection` route) provides a visual book-style interface
 - `owned_cards` signal uses HashMap<usize, Card> for O(1) lookups
 - Loads all owned cards on mount via `get_all_owned_cards_db()`
 - Updates local state optimistically after successful database operations
+
+## Logging
+
+The application uses structured logging via the `tracing` crate for debugging and monitoring:
+
+### Logging Infrastructure
+
+- **Location**: `src/logging.rs` - Reusable logging macros
+- **Initialization**: `src/main.rs` - Logger setup with environment-based log levels
+- **Dependencies**: `tracing` and `tracing-subscriber` (enabled with `server` feature)
+
+### Log Levels
+
+**Development** (with `dev` feature):
+- Default: `DEBUG` level
+- Shows detailed flow including database queries and API calls
+- Excludes noisy crates: `hyper`, `tower`, `tokio`, `dioxus_core`
+
+**Production**:
+- Default: `INFO` level
+- Shows important events only (auth, ownership changes, errors)
+- Configure via `RUST_LOG` environment variable
+
+### What Gets Logged
+
+**Server-side** (`src/backend.rs`):
+- ✅ Server function entry/exit with parameters
+- ✅ Database operations (SELECT, INSERT, UPDATE, DELETE) with timing
+- ✅ Authentication attempts (password length only, never actual password)
+- ✅ Card ownership changes (before/after states)
+- ✅ Remote API calls to PokeAPI with success/failure
+- ✅ Errors with full context chain
+
+**Client-side** (`src/components/login.rs`, etc.):
+- ✅ Authentication flow events
+- ✅ Component errors
+
+**Security**: All logging uses structured fields. Sensitive data like passwords are NEVER logged.
+
+### Usage
+
+**Development:**
+```bash
+# Default DEBUG level
+pixi run serve
+
+# Trace level (very verbose)
+RUST_LOG=trace pixi run serve
+
+# Module-specific logging
+RUST_LOG=fs_chaot::backend=debug pixi run serve
+```
+
+**Production:**
+```bash
+# Set in Railway environment variables
+RUST_LOG=info
+
+# Error-only logging
+RUST_LOG=error
+```
+
+### Logging Macros
+
+Three reusable macros in `src/logging.rs`:
+
+1. **`log_server_fn!(name, key = value, ...)`** - Logs server function calls with structured fields
+2. **`log_db_op!(operation, key = value, ...)`** - Logs database operations
+3. **`log_ownership_change!(card_id, old_state, new_state)`** - Tracks collection changes
+
+**Example:**
+```rust
+log_server_fn!("get_card_by_id_db", card_id = 25);
+log_db_op!("SELECT", table = "cards", card_id = 25);
+log_ownership_change!(25, false, true);
+```
+
+### Log Output Format
+
+Structured logs with fields for filtering:
+```
+INFO fs_chaot::backend: server function called fn_name="update_card_db" card_id=25 owned=true
+INFO fs_chaot::backend: card ownership changed card_id=25 old_owned=false new_owned=true
+DEBUG fs_chaot::backend: database operation operation="UPDATE" table="cards" card_id=25
+```
+
+### Client-to-Server Error Forwarding
+
+The `log_client_error()` server function allows client-side errors to be forwarded to server logs in production for centralized monitoring.
 
 ## Important Notes
 
