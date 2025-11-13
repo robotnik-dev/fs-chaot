@@ -300,9 +300,11 @@ pub fn CardOwnershipDialog(
                                         key: "{index}",
                                         div { class: "expansion-item-info",
                                             if let Some(exp) = all_expansions().iter().find(|e| e.id == entry.expansion_id) {
-                                                span { class: "expansion-name", "{exp.name}" }
+                                                span { class: "expansion-name",
+                                                    "{exp.abbreviation}: {exp.name}"
+                                                }
                                                 span { class: "expansion-card-num",
-                                                    " - Card #{entry.card_number}"
+                                                    " - #{entry.card_number}"
                                                 }
                                                 span { class: "expansion-card-num", " - {entry.rarity}" }
                                             }
@@ -335,8 +337,8 @@ pub fn CardOwnershipDialog(
                                             }
                                         },
                                         option { value: "", "Select expansion..." }
-                                        for expansion in all_expansions().iter() {
-                                            option { value: "{expansion.id}", "{expansion.name}" }
+                                        for exp in all_expansions().iter() {
+                                            option { value: "{exp.id}", "{exp.abbreviation}: {exp.name}" }
                                         }
                                     }
 

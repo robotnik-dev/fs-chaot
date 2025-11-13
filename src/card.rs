@@ -22,7 +22,6 @@ pub struct Card {
     pub entry: Entry,
     pub img_url: String,
     pub owned: Bool,
-    pub rarity: Rarity,
 }
 
 impl Card {

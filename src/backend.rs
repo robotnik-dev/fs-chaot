@@ -28,7 +28,6 @@ thread_local! {
                 entry INTEGER NOT NULL,
                 img_url TEXT NOT NULL,
                 owned BOOLEAN NOT NULL CHECK (owned IN (0,1)),
-                rarity TEXT NOT NULL,
                 created_at DATETIME DEFAULT (datetime('now', 'localtime'))
             );
 
@@ -149,7 +148,7 @@ pub async fn get_card_by_id_db(id: usize) -> Result<Card> {
     let result = DB.with(|db| {
         log_db_op!("SELECT", table = "cards", card_id = id);
         db.prepare(
-            "SELECT id, name_en, name_de, book, page, side, entry, img_url, owned, rarity FROM cards WHERE id = ?",
+            "SELECT id, name_en, name_de, book, page, side, entry, img_url, owned  FROM cards WHERE id = ?",
         )?
         .query_row([id], |row| {
             Ok(Card {
@@ -162,7 +161,6 @@ pub async fn get_card_by_id_db(id: usize) -> Result<Card> {
                 entry: row.get(6)?,
                 img_url: row.get(7)?,
                 owned: row.get(8)?,
-                rarity: row.get(9)?,
             })
         })
         .map_err(|e| e.into())
@@ -185,7 +183,7 @@ pub async fn get_card_by_name_db(name: String) -> Result<Card> {
     let result = DB.with(|db| {
         log_db_op!("SELECT", table = "cards", name = &name);
         db.prepare(
-            "SELECT id, name_en, name_de, book, page, side, entry, img_url, owned, rarity FROM cards WHERE name_de = ? COLLATE NOCASE OR name_en = ? COLLATE NOCASE",
+            "SELECT id, name_en, name_de, book, page, side, entry, img_url, owned  FROM cards WHERE name_de = ? COLLATE NOCASE OR name_en = ? COLLATE NOCASE",
         )?
         .query_row([&name, &name], |row| {
             Ok(Card {
@@ -198,7 +196,6 @@ pub async fn get_card_by_name_db(name: String) -> Result<Card> {
                 entry: row.get(6)?,
                 img_url: row.get(7)?,
                 owned: row.get(8)?,
-                rarity: row.get(9)?,
             })
         })
         .map_err(|e| e.into())
@@ -221,7 +218,7 @@ pub async fn get_cards_with_timestamp_db() -> Result<Vec<(Card, String)>> {
         log_db_op!("SELECT", table = "cards", operation = "get_all_with_timestamp");
         Ok(db
             .prepare(
-                "SELECT id, name_en, name_de, book, page, side, entry, img_url, owned, rarity, created_at FROM cards",
+                "SELECT id, name_en, name_de, book, page, side, entry, img_url, owned, created_at FROM cards",
             )?
             .query_map([], |row| {
                 Ok((
@@ -235,7 +232,6 @@ pub async fn get_cards_with_timestamp_db() -> Result<Vec<(Card, String)>> {
                         entry: row.get(6)?,
                         img_url: row.get(7)?,
                         owned: row.get(8)?,
-                        rarity: row.get(9)?,
                     },
                     row.get(10)?
                 ))
@@ -258,8 +254,8 @@ pub async fn save_card_db(card: Card) -> Result<(), ServerFnError> {
     let result = DB.with(|f| {
         log_db_op!("INSERT OR REPLACE", table = "cards", card_id = card.index.0);
         f.execute(
-            "INSERT OR REPLACE INTO cards (id, name_en, name_de, book, page, side, entry, img_url, owned, rarity) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
-            params![card.index, card.name_en, card.name_de, card.book, card.page, card.side, card.entry, card.img_url, card.owned, card.rarity],
+            "INSERT OR REPLACE INTO cards (id, name_en, name_de, book, page, side, entry, img_url, owned) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+            params![card.index, card.name_en, card.name_de, card.book, card.page, card.side, card.entry, card.img_url, card.owned],
         )
     });
 
@@ -290,7 +286,7 @@ pub async fn get_all_owned_cards_db() -> Result<HashMap<usize, Card>, ServerFnEr
     let result = DB.with(|db| {
         log_db_op!("SELECT", table = "cards", filter = "owned = 1");
         let mut stmt = db.prepare(
-            "SELECT id, name_en, name_de, book, page, side, entry, img_url, owned, rarity FROM cards WHERE owned = 1",
+            "SELECT id, name_en, name_de, book, page, side, entry, img_url, owned  FROM cards WHERE owned = 1",
         )?;
 
         let cards = stmt
@@ -305,7 +301,6 @@ pub async fn get_all_owned_cards_db() -> Result<HashMap<usize, Card>, ServerFnEr
                     entry: row.get(6)?,
                     img_url: row.get(7)?,
                     owned: row.get(8)?,
-                    rarity: row.get(9)?,
                 };
                 Ok((card.index.0, card))
             })?
@@ -363,8 +358,8 @@ pub async fn update_card_db(card: Card) -> Result<(), ServerFnError> {
     let result = DB.with(|f| {
         log_db_op!("UPDATE", table = "cards", card_id = card.index.0);
         f.execute(
-            "UPDATE cards SET name_en = ?1, name_de = ?2, book = ?3, page = ?4, side = ?5, entry = ?6, img_url = ?7, owned = ?8, rarity = ?9 WHERE id = ?10",
-            params![card.name_en, card.name_de, card.book, card.page, card.side, card.entry, card.img_url, card.owned, card.rarity, card.index],
+            "UPDATE cards SET name_en = ?1, name_de = ?2, book = ?3, page = ?4, side = ?5, entry = ?6, img_url = ?7, owned = ?8  WHERE id = ?10",
+            params![card.name_en, card.name_de, card.book, card.page, card.side, card.entry, card.img_url, card.owned, card.index],
         )
     });
 

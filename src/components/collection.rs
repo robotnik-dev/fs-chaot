@@ -1,5 +1,5 @@
 use crate::{
-    backend::{get_all_owned_cards_db, get_card_by_id_remote, save_card_db},
+    backend::{get_all_owned_cards_db, get_card_by_id_db, get_card_by_id_remote, save_card_db},
     card::{Card, Index, Page},
     components::{
         BookNavigation, CardOwnershipDialog, CardViewCompact, DialogContent, DialogDescription,
@@ -63,23 +63,33 @@ pub fn Collection() -> Element {
         if let Some(card) = owned_cards.read().get(&index) {
             temp_card.set(card.clone());
         } else {
-            // Fetch from remote
             loading_card.set(true);
             spawn(async move {
-                match get_card_by_id_remote(index).await {
+                // Fetch from db
+                match get_card_by_id_db(index).await {
                     Ok(card) => {
                         temp_card.set(card.clone());
                         loading_card.set(false);
-                        if let Err(e) = save_card_db(card.clone()).await {
-                            error_message.set(format!("Failed to save card: {}", e));
-                            loading_card.set(false);
-                            dialog_open.set(false);
-                        }
                     }
-                    Err(e) => {
-                        error_message.set(format!("Failed to fetch card: {}", e));
-                        loading_card.set(false);
-                        dialog_open.set(false);
+
+                    Err(_) => {
+                        // Fetch from remote
+                        match get_card_by_id_remote(index).await {
+                            Ok(card) => {
+                                temp_card.set(card.clone());
+                                loading_card.set(false);
+                                if let Err(e) = save_card_db(card.clone()).await {
+                                    error_message.set(format!("Failed to save card: {}", e));
+                                    loading_card.set(false);
+                                    dialog_open.set(false);
+                                }
+                            }
+                            Err(e) => {
+                                error_message.set(format!("Failed to fetch card: {}", e));
+                                loading_card.set(false);
+                                dialog_open.set(false);
+                            }
+                        }
                     }
                 }
             });
