@@ -14,6 +14,7 @@ pub fn ProtectedRoute() -> Element {
     // Check authentication on mount and whenever it changes
     #[cfg(not(feature = "dev"))]
     {
+        use crate::Route;
         let nav = use_navigator();
         use_effect(move || {
             if !*IS_AUTHENTICATED.read() {

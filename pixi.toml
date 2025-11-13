@@ -43,12 +43,12 @@ compose-language-service = ">=0.4.0,<0.5"
 cargo-fmt = "cargo fmt --all --check"
 taplo-fmt = "taplo fmt --check"
 prettier-fmt = "prettier --check ."
-dx-check = { cmd = "dx check --fullstack --all-features --release --locked", depends-on = [
+dx-check = { cmd = "dx check --fullstack --features web,server --release --locked", depends-on = [
   "install-dx",
 ] }
-clippy = "cargo clippy --all-features --release --locked -- -D warnings"
+clippy = "cargo clippy --features web,server --release --locked -- -D warnings"
 
-test = "cargo test --all-features --release --locked"
+test = "cargo test --features web,server --release --locked"
 fmt = { depends-on = ["cargo-fmt", "taplo-fmt", "prettier-fmt"] }
 lint = { depends-on = ["clippy", "dx-check"] }
 

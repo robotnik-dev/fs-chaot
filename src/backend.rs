@@ -4,7 +4,7 @@ use crate::{log_db_op, log_ownership_change, log_server_fn};
 use anyhow::Result;
 use dioxus::prelude::*;
 use std::collections::HashMap;
-#[cfg(feature = "server")]
+#[cfg(feature = "dev")]
 use std::fs;
 
 #[cfg(feature = "server")]
@@ -15,6 +15,7 @@ thread_local! {
 
         #[cfg(feature = "dev")]
         fs::create_dir_all("db_dev/").unwrap();
+        #[cfg(feature = "dev")]
         let conn = rusqlite::Connection::open("db_dev/dev.db").expect("Failed to open database");
 
         conn.execute_batch(
