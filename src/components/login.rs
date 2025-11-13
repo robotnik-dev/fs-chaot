@@ -27,17 +27,22 @@ pub fn Login() -> Element {
 
         let entered_password = password.read().clone();
 
+        tracing::debug!("user attempting authentication");
+
         // Call server function to validate password
         match validate_password(entered_password).await {
             Ok(is_valid) => {
                 if is_valid {
+                    tracing::info!("user authenticated successfully");
                     *IS_AUTHENTICATED.write() = true;
                     nav.push(Route::Home);
                 } else {
+                    tracing::warn!("authentication failed - incorrect credentials");
                     error.set("Incorrect password".to_string());
                 }
             }
             Err(e) => {
+                tracing::error!(error = %e, "authentication error");
                 error.set(format!("Error: {}", e));
             }
         }

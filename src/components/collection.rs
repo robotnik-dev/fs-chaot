@@ -2,7 +2,8 @@ use crate::{
     backend::get_all_owned_cards_db,
     card::{Card, Index, Page},
     components::{
-        BookNavigation, CardOwnershipDialog, CardViewCompact, DialogContent, DialogDescription, DialogMode, DialogRoot, DialogTitle, PlaceholderCard
+        BookNavigation, CardOwnershipDialog, CardViewCompact, DialogContent, DialogDescription,
+        DialogMode, DialogRoot, DialogTitle, PlaceholderCard,
     },
     CARDS_PER_PAGE,
 };

@@ -1,5 +1,6 @@
 use crate::card::Card;
 use crate::expansion::{CardExpansion, Expansion};
+use crate::{log_db_op, log_ownership_change, log_server_fn};
 use anyhow::Result;
 use dioxus::prelude::*;
 use std::collections::HashMap;
@@ -68,13 +69,13 @@ fn init_expansions_if_needed(conn: &rusqlite::Connection) -> Result<()> {
     let count: i64 = conn.query_row("SELECT COUNT(*) FROM expansions", [], |row| row.get(0))?;
 
     if count == 0 {
-        info!("Loading expansions from SQL file");
+        tracing::info!("Loading expansions from SQL file");
         let sql_content = include_str!("../db_seed/expansions.sql");
         conn.execute_batch(sql_content)?;
 
         let new_count: i64 =
             conn.query_row("SELECT COUNT(*) FROM expansions", [], |row| row.get(0))?;
-        info!("Loaded {} expansions", new_count);
+        tracing::info!(count = new_count, "Loaded expansions");
     }
 
     Ok(())
@@ -82,36 +83,70 @@ fn init_expansions_if_needed(conn: &rusqlite::Connection) -> Result<()> {
 
 #[server(endpoint = "validate_password")]
 pub async fn validate_password(password: String) -> Result<bool, ServerFnError> {
-    let correct_password = std::env::var("APP_PASSWORD").unwrap();
+    log_server_fn!("validate_password", password_length = password.len());
 
-    Ok(password == correct_password)
+    let correct_password = std::env::var("APP_PASSWORD").unwrap();
+    let is_valid = password == correct_password;
+
+    if is_valid {
+        tracing::info!("authentication successful");
+    } else {
+        tracing::warn!("authentication failed - incorrect password");
+    }
+
+    Ok(is_valid)
 }
 
 #[server(endpoint = "get_card_by_id_remote")]
 pub async fn get_card_by_id_remote(id: usize) -> Result<Card, ServerFnError> {
-    info!("get card from remote with id: {id}");
+    log_server_fn!("get_card_by_id_remote", card_id = id);
     use crate::card::Index;
     match Index::try_new(id) {
-        Ok(index) => Ok(Card::try_from_index(index).await?),
-        Err(err) => Err(ServerFnError::ServerError {
-            message: err.to_string(),
-            code: 500,
-            details: None,
-        }),
+        Ok(index) => {
+            let result = Card::try_from_index(index).await;
+            match &result {
+                Ok(card) => {
+                    tracing::info!(card_id = id, name = %card.name_en.0, "fetched card from remote API")
+                }
+                Err(e) => {
+                    tracing::error!(card_id = id, error = %e, "failed to fetch card from remote API")
+                }
+            }
+            result.map_err(|e| e.into())
+        }
+        Err(err) => {
+            tracing::error!(card_id = id, error = %err, "invalid card id");
+            Err(ServerFnError::ServerError {
+                message: err.to_string(),
+                code: 500,
+                details: None,
+            })
+        }
     }
 }
 
 #[server(endpoint = "get_card_by_name_remote")]
 pub async fn get_card_by_name_remote(name: String) -> Result<Card, ServerFnError> {
-    info!("get card from remote with name: {name}");
+    log_server_fn!("get_card_by_name_remote", name = &name);
     use crate::card::Name;
-    Ok(Card::try_from_name(Name::new(name.as_str())).await?)
+    let result = Card::try_from_name(Name::new(name.as_str())).await;
+    match &result {
+        Ok(card) => {
+            tracing::info!(card_id = card.index.0, name = %card.name_en.0, "fetched card by name from remote API")
+        }
+        Err(e) => {
+            tracing::error!(name = %name, error = %e, "failed to fetch card by name from remote API")
+        }
+    }
+    result.map_err(|e| e.into())
 }
 
 #[server(endpoint = "get_card_by_id_db")]
 pub async fn get_card_by_id_db(id: usize) -> Result<Card> {
-    info!("get card from DB with id: {id}");
-    DB.with(|db| {
+    log_server_fn!("get_card_by_id_db", card_id = id);
+
+    let result = DB.with(|db| {
+        log_db_op!("SELECT", table = "cards", card_id = id);
         db.prepare(
             "SELECT id, name_en, name_de, book, page, side, entry, img_url, owned, rarity FROM cards WHERE id = ?",
         )?
@@ -130,13 +165,24 @@ pub async fn get_card_by_id_db(id: usize) -> Result<Card> {
             })
         })
         .map_err(|e| e.into())
-    })
+    });
+
+    match &result {
+        Ok(card) => {
+            tracing::debug!(card_id = id, name = %card.name_en.0, "card fetched from database")
+        }
+        Err(e) => tracing::debug!(card_id = id, error = %e, "card not found in database"),
+    }
+
+    result
 }
 
 #[server(endpoint = "get_card_by_name_db")]
 pub async fn get_card_by_name_db(name: String) -> Result<Card> {
-    info!("get card from DB with name: {name}");
-    DB.with(|db| {
+    log_server_fn!("get_card_by_name_db", name = &name);
+
+    let result = DB.with(|db| {
+        log_db_op!("SELECT", table = "cards", name = &name);
         db.prepare(
             "SELECT id, name_en, name_de, book, page, side, entry, img_url, owned, rarity FROM cards WHERE name_de = ? COLLATE NOCASE OR name_en = ? COLLATE NOCASE",
         )?
@@ -155,13 +201,23 @@ pub async fn get_card_by_name_db(name: String) -> Result<Card> {
             })
         })
         .map_err(|e| e.into())
-    })
+    });
+
+    match &result {
+        Ok(card) => {
+            tracing::debug!(card_id = card.index.0, name = %card.name_en.0, "card fetched from database by name")
+        }
+        Err(e) => tracing::debug!(name = %name, error = %e, "card not found in database by name"),
+    }
+
+    result
 }
 
 #[server(endpoint = "get_cards_with_timestamp_db")]
 pub async fn get_cards_with_timestamp_db() -> Result<Vec<(Card, String)>> {
-    info!("get all cards from DB");
-    DB.with(|db| {
+    log_server_fn!("get_cards_with_timestamp_db");
+    let result = DB.with(|db| {
+        log_db_op!("SELECT", table = "cards", operation = "get_all_with_timestamp");
         Ok(db
             .prepare(
                 "SELECT id, name_en, name_de, book, page, side, entry, img_url, owned, rarity, created_at FROM cards",
@@ -184,32 +240,54 @@ pub async fn get_cards_with_timestamp_db() -> Result<Vec<(Card, String)>> {
                 ))
             })?
             .collect::<Result<Vec<(Card, String)>, rusqlite::Error>>()?)
-    })
+    });
+    match &result {
+        Ok(cards) => tracing::debug!(count = cards.len(), "fetched cards with timestamps"),
+        Err(e) => tracing::error!(error = %e, "failed to fetch cards with timestamps"),
+    }
+    result
 }
 
 #[server(endpoint = "save_card_db")]
 pub async fn save_card_db(card: Card) -> Result<(), ServerFnError> {
     use rusqlite::params;
 
-    info!("save card to DB: {card:#?}");
-    DB.with(|f| {
+    log_server_fn!("save_card_db", card_id = card.index.0, owned = card.owned.0);
+
+    let result = DB.with(|f| {
+        log_db_op!("INSERT OR REPLACE", table = "cards", card_id = card.index.0);
         f.execute(
             "INSERT OR REPLACE INTO cards (id, name_en, name_de, book, page, side, entry, img_url, owned, rarity) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
             params![card.index, card.name_en, card.name_de, card.book, card.page, card.side, card.entry, card.img_url, card.owned, card.rarity],
         )
-    })
-    .map_err(|err| ServerFnError::ServerError {
-        message: err.to_string(),
-        code: 500,
-        details: Some("could not save card to DB".into()),
-    })?;
-    Ok(())
+    });
+
+    match result {
+        Ok(_) => {
+            tracing::info!(
+                card_id = card.index.0,
+                owned = card.owned.0,
+                "card saved to database"
+            );
+            Ok(())
+        }
+        Err(err) => {
+            tracing::error!(card_id = card.index.0, error = %err, "failed to save card to database");
+            Err(ServerFnError::ServerError {
+                message: err.to_string(),
+                code: 500,
+                details: Some("could not save card to DB".into()),
+            })
+        }
+    }
 }
 
 #[server(endpoint = "get_all_owned_cards_db")]
 pub async fn get_all_owned_cards_db() -> Result<HashMap<usize, Card>, ServerFnError> {
-    info!("get all owned cards from DB");
-    DB.with(|db| {
+    log_server_fn!("get_all_owned_cards_db");
+
+    let result = DB.with(|db| {
+        log_db_op!("SELECT", table = "cards", filter = "owned = 1");
         let mut stmt = db.prepare(
             "SELECT id, name_en, name_de, book, page, side, entry, img_url, owned, rarity FROM cards WHERE owned = 1",
         )?;
@@ -233,38 +311,87 @@ pub async fn get_all_owned_cards_db() -> Result<HashMap<usize, Card>, ServerFnEr
             .collect::<Result<HashMap<usize, Card>, rusqlite::Error>>()?;
 
         Ok(cards)
-    })
-    .map_err(|e: anyhow::Error| ServerFnError::ServerError {
-        message: e.to_string(),
-        code: 500,
-        details: Some("could not fetch owned cards from DB".into()),
-    })
+    });
+
+    match &result {
+        Ok(cards) => {
+            tracing::info!(count = cards.len(), "fetched owned cards from database");
+            result.map_err(|e: anyhow::Error| ServerFnError::ServerError {
+                message: e.to_string(),
+                code: 500,
+                details: Some("could not fetch owned cards from DB".into()),
+            })
+        }
+        Err(e) => {
+            tracing::error!(error = %e, "failed to fetch owned cards from database");
+            Err(ServerFnError::ServerError {
+                message: e.to_string(),
+                code: 500,
+                details: Some("could not fetch owned cards from DB".into()),
+            })
+        }
+    }
 }
 
 #[server(endpoint = "update_card_db")]
 pub async fn update_card_db(card: Card) -> Result<(), ServerFnError> {
     use rusqlite::params;
 
-    info!("update card in DB: {card:#?}");
-    DB.with(|f| {
+    log_server_fn!(
+        "update_card_db",
+        card_id = card.index.0,
+        owned = card.owned.0
+    );
+
+    // Track ownership change - fetch old state first
+    let old_owned = DB.with(|db| {
+        db.query_row(
+            "SELECT owned FROM cards WHERE id = ?",
+            [card.index.0],
+            |row| row.get::<_, bool>(0),
+        )
+        .ok()
+    });
+
+    if let Some(old) = old_owned {
+        if old != card.owned.0 {
+            log_ownership_change!(card.index.0, old, card.owned.0);
+        }
+    }
+
+    let result = DB.with(|f| {
+        log_db_op!("UPDATE", table = "cards", card_id = card.index.0);
         f.execute(
             "UPDATE cards SET name_en = ?1, name_de = ?2, book = ?3, page = ?4, side = ?5, entry = ?6, img_url = ?7, owned = ?8, rarity = ?9 WHERE id = ?10",
             params![card.name_en, card.name_de, card.book, card.page, card.side, card.entry, card.img_url, card.owned, card.rarity, card.index],
         )
-    })
-    .map_err(|err| ServerFnError::ServerError {
-        message: err.to_string(),
-        code: 500,
-        details: Some("could not update card in DB".into()),
-    })?;
-    Ok(())
+    });
+
+    match result {
+        Ok(_) => {
+            tracing::info!(
+                card_id = card.index.0,
+                owned = card.owned.0,
+                "card updated in database"
+            );
+            Ok(())
+        }
+        Err(err) => {
+            tracing::error!(card_id = card.index.0, error = %err, "failed to update card in database");
+            Err(ServerFnError::ServerError {
+                message: err.to_string(),
+                code: 500,
+                details: Some("could not update card in DB".into()),
+            })
+        }
+    }
 }
 
 // ==================== Expansion Server Functions ====================
 
 #[server(endpoint = "get_all_expansions_db")]
 pub async fn get_all_expansions_db() -> Result<Vec<Expansion>, ServerFnError> {
-    info!("get all expansions from DB");
+    log_server_fn!("get_all_expansions_db");
     DB.with(|db| {
         let mut stmt = db.prepare(
             "SELECT id, name, abbreviation, cards, secret_cards FROM expansions ORDER BY name",
@@ -293,7 +420,7 @@ pub async fn get_all_expansions_db() -> Result<Vec<Expansion>, ServerFnError> {
 
 #[server(endpoint = "get_card_expansions_db")]
 pub async fn get_card_expansions_db(card_id: usize) -> Result<Vec<CardExpansion>, ServerFnError> {
-    info!("get card expansions from DB for card_id: {}", card_id);
+    log_server_fn!("get_card_expansions_db", card_id = card_id);
     DB.with(|db| {
         let mut stmt = db.prepare(
             "SELECT id, card_id, expansion_id, card_number FROM card_expansions WHERE card_id = ?",
@@ -323,7 +450,11 @@ pub async fn get_card_expansions_db(card_id: usize) -> Result<Vec<CardExpansion>
 pub async fn save_card_expansion_db(card_expansion: CardExpansion) -> Result<(), ServerFnError> {
     use rusqlite::params;
 
-    info!("save card expansion to DB: {card_expansion:#?}");
+    log_server_fn!(
+        "save_card_expansion_db",
+        card_id = card_expansion.card_id,
+        expansion_id = card_expansion.expansion_id
+    );
     DB.with(|f| {
         f.execute(
             "INSERT INTO card_expansions (card_id, expansion_id, card_number) VALUES (?1, ?2, ?3)",
@@ -346,7 +477,11 @@ pub async fn save_card_expansion_db(card_expansion: CardExpansion) -> Result<(),
 pub async fn update_card_expansion_db(card_expansion: CardExpansion) -> Result<(), ServerFnError> {
     use rusqlite::params;
 
-    info!("update card expansion in DB: {card_expansion:#?}");
+    log_server_fn!(
+        "update_card_expansion_db",
+        card_id = card_expansion.card_id,
+        expansion_id = card_expansion.expansion_id
+    );
 
     if card_expansion.id.is_none() {
         return Err(ServerFnError::ServerError {
@@ -358,8 +493,12 @@ pub async fn update_card_expansion_db(card_expansion: CardExpansion) -> Result<(
 
     DB.with(|f| {
         f.execute(
-            "UPDATE card_expansions SET expansion_id = ?1, card_number = ?2 WHERE id = ?5",
-            params![card_expansion.expansion_id, card_expansion.card_number,],
+            "UPDATE card_expansions SET expansion_id = ?1, card_number = ?2 WHERE id = ?3",
+            params![
+                card_expansion.expansion_id,
+                card_expansion.card_number,
+                card_expansion.id.unwrap()
+            ],
         )
     })
     .map_err(|err| ServerFnError::ServerError {
@@ -374,7 +513,8 @@ pub async fn update_card_expansion_db(card_expansion: CardExpansion) -> Result<(
 pub async fn delete_card_expansion_db(id: usize) -> Result<(), ServerFnError> {
     use rusqlite::params;
 
-    info!("delete card expansion from DB with id: {}", id);
+    log_server_fn!("delete_card_expansion_db", expansion_id = id);
+    tracing::info!(expansion_id = id, "deleting card expansion");
     DB.with(|f| f.execute("DELETE FROM card_expansions WHERE id = ?1", params![id]))
         .map_err(|err| ServerFnError::ServerError {
             message: err.to_string(),
@@ -388,10 +528,8 @@ pub async fn delete_card_expansion_db(id: usize) -> Result<(), ServerFnError> {
 pub async fn delete_all_card_expansions_db(card_id: usize) -> Result<(), ServerFnError> {
     use rusqlite::params;
 
-    info!(
-        "delete all card expansions from DB for card_id: {}",
-        card_id
-    );
+    log_server_fn!("delete_all_card_expansions_db", card_id = card_id);
+    tracing::info!(card_id = card_id, "deleting all expansions for card");
     DB.with(|f| {
         f.execute(
             "DELETE FROM card_expansions WHERE card_id = ?1",
@@ -403,6 +541,25 @@ pub async fn delete_all_card_expansions_db(card_id: usize) -> Result<(), ServerF
         code: 500,
         details: Some("could not delete card expansions from DB".into()),
     })?;
+    Ok(())
+}
+
+// ==================== Client Logging ====================
+
+/// Server function to log client-side errors
+#[server(endpoint = "log_client_error")]
+pub async fn log_client_error(
+    component: String,
+    message: String,
+    details: Option<String>,
+) -> Result<(), ServerFnError> {
+    tracing::error!(
+        component = %component,
+        message = %message,
+        details = ?details,
+        source = "client",
+        "client-side error"
+    );
     Ok(())
 }
 

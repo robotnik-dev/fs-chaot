@@ -31,6 +31,7 @@ pub struct CardExpansion {
 impl CardExpansion {
     /// Calculates if a card is secret based on card_number and expansion.cards
     /// Returns true if card_number (as integer) > expansion.cards
+    #[allow(dead_code)]
     pub fn is_secret(&self, expansion: &Expansion) -> bool {
         self.card_number
             .parse::<usize>()
@@ -39,6 +40,7 @@ impl CardExpansion {
     }
 
     /// Formats card number for display: "24/165" format
+    #[allow(dead_code)]
     pub fn display_card_number(&self, expansion: &Expansion) -> String {
         format!("{}/{}", self.card_number, expansion.cards)
     }
