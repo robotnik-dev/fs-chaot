@@ -234,7 +234,7 @@ pub async fn get_cards_with_timestamp_db() -> Result<Vec<(Card, String)>> {
                         img_url: row.get(7)?,
                         owned: row.get(8)?,
                     },
-                    row.get(10)?
+                    row.get(9)?
                 ))
             })?
             .collect::<Result<Vec<(Card, String)>, rusqlite::Error>>()?)
@@ -359,7 +359,7 @@ pub async fn update_card_db(card: Card) -> Result<(), ServerFnError> {
     let result = DB.with(|f| {
         log_db_op!("UPDATE", table = "cards", card_id = card.index.0);
         f.execute(
-            "UPDATE cards SET name_en = ?1, name_de = ?2, book = ?3, page = ?4, side = ?5, entry = ?6, img_url = ?7, owned = ?8  WHERE id = ?10",
+            "UPDATE cards SET name_en = ?1, name_de = ?2, book = ?3, page = ?4, side = ?5, entry = ?6, img_url = ?7, owned = ?8  WHERE id = ?9",
             params![card.name_en, card.name_de, card.book, card.page, card.side, card.entry, card.img_url, card.owned, card.index],
         )
     });
