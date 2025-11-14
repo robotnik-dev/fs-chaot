@@ -15,7 +15,15 @@ pub fn BarChart(mut entries: Vec<BarChartEntry>, metadata: StatisticMetadata) ->
         div { class: "bar-chart",
             for entry in entries {
                 div { class: "bar-chart__row", key: "{entry.label}",
-                    span { class: "bar-chart__label", title: "{entry.label}", "{entry.label}" }
+                    span { class: "bar-chart__label", title: "{entry.label}",
+                        {
+                            if let Some(abbr) = entry.metadata.get("abbreviation") {
+                                format!("{}({})", entry.label, abbr)
+                            } else {
+                                "{entry.label}".to_string()
+                            }
+                        }
+                    }
                     div { class: "bar-chart__bar-container",
                         div {
                             class: "bar-chart__bar",
