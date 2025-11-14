@@ -11,6 +11,7 @@
 *.db
 # Database folder (mounted as volume in production)
 db/
+db_dev/
 
 .env
 # auto generated files

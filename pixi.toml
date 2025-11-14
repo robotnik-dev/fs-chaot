@@ -67,7 +67,7 @@ fmt-write = { depends-on = [
 ] }
 
 [feature.dev.tasks.serve]
-cmd = "bash -c '[ -f .env ] && export $(cat .env | xargs) && dx serve --web'"
+cmd = "dx serve --web --features dev"
 depends-on = ["install-dx"]
 
 [feature.prod.dependencies]

@@ -9,7 +9,7 @@ use dioxus::prelude::*;
 #[component]
 pub fn Home() -> Element {
     let mut dialog_open = use_signal(|| false);
-    let mut selected_card = use_signal(|| None::<Card>);
+    let mut selected_card = use_signal(Card::default);
     let mut loading_card = use_signal(|| false);
     let mut error_message = use_signal(String::new);
 
@@ -22,7 +22,7 @@ pub fn Home() -> Element {
             // Try to get card from DB first
             match get_card_by_id_db(index).await {
                 Ok(card) => {
-                    selected_card.set(Some(card));
+                    selected_card.set(card);
                     loading_card.set(false);
                 }
                 Err(_) => {
@@ -30,7 +30,7 @@ pub fn Home() -> Element {
                     match Index::try_new(index) {
                         Ok(idx) => match get_card_by_id_remote(idx.0).await {
                             Ok(card) => {
-                                selected_card.set(Some(card));
+                                selected_card.set(card);
                                 loading_card.set(false);
                             }
                             Err(e) => {
@@ -70,6 +70,8 @@ pub fn Home() -> Element {
         *CARDS.write() = cards;
     };
 
+    let is_owned = move || selected_card.read().clone().owned.0;
+
     rsx! {
         SearchBar {}
         CardContainer { onclick: handle_card_click }
@@ -77,7 +79,7 @@ pub fn Home() -> Element {
         CardOwnershipDialog {
             card: selected_card,
             dialog_open,
-            mode: DialogMode::AddAndRemove,
+            mode: if is_owned() { DialogMode::Edit } else { DialogMode::Add },
             on_change: handle_ownership_change,
         }
     }
