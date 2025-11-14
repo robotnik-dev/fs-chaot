@@ -35,6 +35,7 @@ FROM ubuntu:24.04 AS production
 RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /tmp/output/web/ /usr/local/app
+COPY pokemon_name_overrides.json /usr/local/app
 
 # Create db directory and set permissions
 RUN mkdir -p /usr/local/app/db && chmod 777 /usr/local/app/db
