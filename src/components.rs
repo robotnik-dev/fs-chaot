@@ -7,6 +7,7 @@ mod login;
 mod nav_bar;
 mod placeholder_card;
 mod protected_route;
+pub mod statistics;
 
 pub use book_navigation::*;
 pub use card_ownership_dialog::*;
@@ -17,3 +18,4 @@ pub use login::*;
 pub use nav_bar::*;
 pub use placeholder_card::*;
 pub use protected_route::*;
+pub use statistics::*;
