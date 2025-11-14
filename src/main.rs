@@ -15,10 +15,14 @@ pub const LANGUAGE_URL: &str = "https://raw.githubusercontent.com/PokeAPI/pokeap
 pub const SPRITE_URL: &str =
     "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/";
 pub const CARDS_PER_BOOK: usize = 576;
-pub const CARDS_PER_PAGE: usize = 24;
+pub const BOOKS: usize = 2;
+pub const CARDS_PER_DOUBLE_PAGE: usize = 24;
+pub const MAX_POKEMON: usize = 1025;
+pub const TOTAL_PAGES: usize = MAX_POKEMON.div_ceil(CARDS_PER_DOUBLE_PAGE);
+
+const FAVICON: Asset = asset!("/assets/favicon.ico");
 static STYLE: Asset = asset!("/assets/style.css");
 static THEME: Asset = asset!("/assets/dx-components-theme.css");
-const FAVICON: Asset = asset!("/assets/favicon.ico");
 
 #[derive(Routable, Clone, PartialEq)]
 pub enum Route {
@@ -26,12 +30,6 @@ pub enum Route {
     Login,
 
     #[layout(ProtectedRoute)]
-    #[route("/home")]
-    Home,
-
-    #[route("/history")]
-    History,
-
     #[route("/collection")]
     Collection,
 }

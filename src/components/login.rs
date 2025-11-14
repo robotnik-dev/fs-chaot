@@ -4,12 +4,12 @@ use dioxus::prelude::*;
 #[component]
 pub fn Login() -> Element {
     let nav = use_navigator();
-    // when in dev mode, navigate to Home
+    // when in dev mode, navigate to Collection
     #[cfg(feature = "dev")]
     {
         use_effect(move || {
-            debug!("Navigate to home");
-            nav.push(Route::Home);
+            debug!("Navigate to collection view");
+            nav.push(Route::Collection);
         });
     }
     let mut password = use_signal(String::new);
@@ -18,7 +18,7 @@ pub fn Login() -> Element {
     // If already authenticated, redirect to home
     use_effect(move || {
         if *IS_AUTHENTICATED.read() {
-            nav.push(Route::Home);
+            nav.push(Route::Collection);
         }
     });
 
@@ -35,7 +35,7 @@ pub fn Login() -> Element {
                 if is_valid {
                     tracing::info!("user authenticated successfully");
                     *IS_AUTHENTICATED.write() = true;
-                    nav.push(Route::Home);
+                    nav.push(Route::Collection);
                 } else {
                     tracing::warn!("authentication failed - incorrect credentials");
                     error.set("Incorrect password".to_string());

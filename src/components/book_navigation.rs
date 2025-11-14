@@ -5,11 +5,15 @@ pub fn BookNavigation(
     current_page: Signal<usize>,
     total_pages: usize,
     on_search: EventHandler<String>,
+    loading_card: Signal<bool>,
 ) -> Element {
     let mut search_input = use_signal(String::new);
 
     rsx! {
         div { class: "book-nav",
+            if loading_card() {
+                div { "Loading ..." }
+            }
             input {
                 r#type: "text",
                 placeholder: "Search ID or name...",

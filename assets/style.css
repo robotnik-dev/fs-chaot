@@ -474,7 +474,6 @@
 .book-view-desktop {
   display: flex;
   justify-content: center;
-  padding: 20px;
 }
 
 .book-view-mobile {
@@ -484,7 +483,8 @@
 /* Book Spread (Two-Page Layout) */
 .book-spread {
   display: flex;
-  gap: 40px;
+  flex-direction: row;
+  gap: 50px;
   max-width: 1400px;
   perspective: 1500px;
 }
@@ -502,6 +502,14 @@
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
   min-height: 600px;
   flex: 1;
+}
+
+.book-page-label {
+  display: flex;
+  justify-content: center;
+  margin: 0 auto;
+  border-style: dotted;
+  border-color: slategray;
 }
 
 .book-page--empty {

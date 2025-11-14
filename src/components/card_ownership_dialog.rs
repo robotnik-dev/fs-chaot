@@ -13,7 +13,6 @@ use strum::IntoEnumIterator;
 
 #[derive(Clone, PartialEq)]
 pub enum DialogMode {
-    Read,
     Add,
     Edit,
 }
@@ -284,11 +283,11 @@ pub fn CardOwnershipDialog(
                     // Card Info
                     div { class: "card-dialog-info",
                         div { "ID: #{card.cloned().index}" }
-                        if !matches!(mode, DialogMode::Read) {
+                        if matches!(mode, DialogMode::Edit) {
                             div { "Rarity: {highest_rarity.cloned()}" }
                         }
                     }
-                    if !matches!(mode, DialogMode::Read) {
+                    if matches!(mode, DialogMode::Edit) {
                         div { class: "expansion-manager",
                             h3 { class: "expansion-manager-title", "Expansions" }
 
@@ -309,112 +308,109 @@ pub fn CardOwnershipDialog(
                                                 span { class: "expansion-card-num", " - {entry.rarity}" }
                                             }
                                         }
-                                        if matches!(mode, DialogMode::Edit) {
-                                            button {
-                                                class: "btn-delete-expansion",
-                                                r#type: "button",
-                                                onclick: move |_| remove_expansion(index),
-                                                "Remove"
-                                            }
+                                        button {
+                                            class: "btn-delete-expansion",
+                                            r#type: "button",
+                                            onclick: move |_| remove_expansion(index),
+                                            "Remove"
                                         }
-                                    }
-                                }
-                            }
-
-                            // Add new expansion form
-                            if matches!(mode, DialogMode::Add) || matches!(mode, DialogMode::Edit) {
-                                div { class: "expansion-selector",
-                                    h4 { "Add Expansion" }
-
-                                    select {
-                                        class: "expansion-dropdown",
-                                        value: new_expansion_id().map(|id| id.to_string()).unwrap_or_default(),
-                                        onchange: move |evt| {
-                                            if let Ok(id) = evt.value().parse::<usize>() {
-                                                new_expansion_id.set(Some(id));
-                                            } else {
-                                                new_expansion_id.set(None);
-                                            }
-                                        },
-                                        option { value: "", "Select expansion..." }
-                                        for exp in all_expansions().iter() {
-                                            option { value: "{exp.id}", "{exp.abbreviation}: {exp.name}" }
-                                        }
-                                    }
-
-                                    input {
-                                        class: "card-number-input",
-                                        r#type: "text",
-                                        placeholder: "Card number (e.g., 25/102)",
-                                        value: "{new_card_number()}",
-                                        oninput: move |evt| new_card_number.set(evt.value()),
-                                    }
-
-                                    select {
-                                        class: "rarity-dropdown",
-                                        value: new_rarity().to_string(),
-                                        onchange: move |evt| {
-                                            if let Ok(rarity) = evt.value().parse::<Rarity>() {
-                                                new_rarity.set(rarity);
-                                            }
-                                        },
-                                        option { value: "", "Select rarity..." }
-                                        for rarity in all_rarities().iter() {
-                                            option { value: "{rarity}", "{rarity}" }
-                                        }
-                                    }
-
-                                    button {
-                                        class: "btn-add-expansion",
-                                        r#type: "button",
-                                        onclick: add_expansion,
-                                        "+ Add Expansion"
                                     }
                                 }
                             }
                         }
-                        // Error message
-                        if !error_message().is_empty() {
-                            div { class: "expansion-error", "{error_message()}" }
+                    }
+
+                    // Add new expansion form
+                    div { class: "expansion-selector",
+                        h4 { "Add Expansion" }
+
+                        select {
+                            class: "expansion-dropdown",
+                            value: new_expansion_id().map(|id| id.to_string()).unwrap_or_default(),
+                            onchange: move |evt| {
+                                if let Ok(id) = evt.value().parse::<usize>() {
+                                    new_expansion_id.set(Some(id));
+                                } else {
+                                    new_expansion_id.set(None);
+                                }
+                            },
+                            option { value: "", "Select expansion..." }
+                            for exp in all_expansions().iter() {
+                                option { value: "{exp.id}", "{exp.abbreviation}: {exp.name}" }
+                            }
                         }
 
-                        // Action buttons
-                        div { class: "card-dialog-actions",
-                            // Add to Collection button
-                            if matches!(mode, DialogMode::Add) {
-                                button {
-                                    class: "btn-add",
-                                    disabled: is_submitting(),
-                                    onclick: handle_add_to_collection,
-                                    if is_submitting() {
-                                        "Adding..."
-                                    } else {
-                                        "Add to Collection"
-                                    }
+                        input {
+                            class: "card-number-input",
+                            r#type: "text",
+                            placeholder: "Card number",
+                            value: "{new_card_number()}",
+                            oninput: move |evt| new_card_number.set(evt.value()),
+                        }
+
+                        select {
+                            class: "rarity-dropdown",
+                            value: new_rarity().to_string(),
+                            onchange: move |evt| {
+                                if let Ok(rarity) = evt.value().parse::<Rarity>() {
+                                    new_rarity.set(rarity);
+                                }
+                            },
+                            option { value: "", "Select rarity..." }
+                            for rarity in all_rarities().iter() {
+                                option { value: "{rarity}", "{rarity}" }
+                            }
+                        }
+
+                        button {
+                            class: "btn-add-expansion",
+                            r#type: "button",
+                            onclick: add_expansion,
+                            "+ Add Expansion"
+                        }
+                    }
+
+                    // Error message
+                    if !error_message().is_empty() {
+                        div { class: "expansion-error", "{error_message()}" }
+                    }
+
+                    // Action buttons
+                    div { class: "card-dialog-actions",
+                        // Add to Collection button
+                        if matches!(mode, DialogMode::Add) {
+                            button {
+                                class: "btn-add",
+                                disabled: is_submitting(),
+                                onclick: handle_add_to_collection,
+                                if is_submitting() {
+                                    "Adding..."
+                                } else {
+                                    "Add to Collection"
                                 }
                             }
+                        }
 
-                            // Save Changes and Remove from Collection button
-                            if matches!(mode, DialogMode::Edit) {
-                                button {
-                                    class: "btn-add",
-                                    disabled: is_submitting() || card_expansions().is_empty(),
-                                    onclick: handle_add_to_collection,
-                                    if is_submitting() {
-                                        "Saving..."
-                                    } else {
-                                        "Save Changes"
-                                    }
+                        // Save Changes and Remove from Collection button
+                        if matches!(mode, DialogMode::Edit) {
+                            button {
+                                class: "btn-add",
+                                disabled: is_submitting() || card_expansions().is_empty(),
+                                onclick: handle_add_to_collection,
+                                if is_submitting() {
+                                    "Saving..."
+                                } else {
+                                    "Save Changes"
                                 }
-                                button {
-                                    class: "btn-remove",
-                                    disabled: is_submitting(),
-                                    onclick: handle_remove_from_collection,
-                                    if is_submitting() {
-                                        "Removing..."
-                                    } else {
-                                        "Remove from Collection"
-                                    }
+                            }
+                            button {
+                                class: "btn-remove",
+                                disabled: is_submitting(),
+                                onclick: handle_remove_from_collection,
+                                if is_submitting() {
+                                    "Removing..."
+                                } else {
+                                    "Remove from Collection"
                                 }
                             }
                         }

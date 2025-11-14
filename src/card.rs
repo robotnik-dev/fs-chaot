@@ -1,4 +1,6 @@
-use crate::{pokeapi::PokeApi, BASE_URL, CARDS_PER_BOOK, CARDS_PER_PAGE, LANGUAGE_URL, SPRITE_URL};
+use crate::{
+    pokeapi::PokeApi, BASE_URL, CARDS_PER_BOOK, CARDS_PER_DOUBLE_PAGE, LANGUAGE_URL, SPRITE_URL,
+};
 use anyhow::{anyhow, Result};
 #[cfg(feature = "server")]
 use rusqlite::{
@@ -275,16 +277,16 @@ impl FromSql for Page {
 impl Page {
     /// Calculates the absolut page number counting from 0
     pub fn absolut(index: &Index) -> Self {
-        Self((index.0 as f32 / CARDS_PER_PAGE as f32).ceil() as usize)
+        Self((index.0 as f32 / CARDS_PER_DOUBLE_PAGE as f32).ceil() as usize)
     }
 
     /// Takes into the maximum cards per book into account and calculates the page relative to each book
     pub fn relative(index: &Index) -> Self {
-        let pages = (CARDS_PER_BOOK / CARDS_PER_PAGE) as u16;
-        let page = (index.0 as f32 / CARDS_PER_PAGE as f32).ceil() as u16;
+        let pages = (CARDS_PER_BOOK / CARDS_PER_DOUBLE_PAGE) as u16;
+        let page = (index.0 as f32 / CARDS_PER_DOUBLE_PAGE as f32).ceil() as u16;
         let remainder = page % pages;
         if remainder == 0 {
-            Self(CARDS_PER_PAGE)
+            Self(CARDS_PER_DOUBLE_PAGE)
         } else {
             Self(remainder as usize)
         }
@@ -296,6 +298,16 @@ pub enum Side {
     #[default]
     A,
     B,
+}
+
+impl Side {
+    pub fn from_page(page: Page) -> Self {
+        if page.0.is_multiple_of(2) {
+            Self::B
+        } else {
+            Self::A
+        }
+    }
 }
 
 impl Display for Side {
@@ -335,7 +347,7 @@ impl From<&str> for Side {
 
 impl From<&Index> for Side {
     fn from(value: &Index) -> Self {
-        let rest = (value.0 as f32 / CARDS_PER_PAGE as f32).fract();
+        let rest = (value.0 as f32 / CARDS_PER_DOUBLE_PAGE as f32).fract();
         if rest > 0.5 || rest == 0.0 {
             Self::B
         } else {
@@ -371,14 +383,14 @@ impl FromSql for Entry {
 
 impl Entry {
     pub fn new(index: &Index, page_absolut: &Page, side: &Side) -> Self {
-        let max_card_no = CARDS_PER_PAGE * page_absolut.0;
-        let midpoint = max_card_no - (CARDS_PER_PAGE / 2);
+        let max_card_no = CARDS_PER_DOUBLE_PAGE * page_absolut.0;
+        let midpoint = max_card_no - (CARDS_PER_DOUBLE_PAGE / 2);
         match side {
             Side::A => {
                 if page_absolut.0 == 1 {
                     Self(index.0)
                 } else {
-                    Self((CARDS_PER_PAGE / 2) - (midpoint % index.0))
+                    Self((CARDS_PER_DOUBLE_PAGE / 2) - (midpoint % index.0))
                 }
             }
             Side::B => Self(index.0 - midpoint),
