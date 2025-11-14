@@ -563,6 +563,113 @@ pub async fn log_client_error(
     Ok(())
 }
 
+// ==================== Statistics Server Functions ====================
+
+use crate::statistics::{CollectionStats, ExpansionStats};
+
+/// Fetch expansion completion statistics
+/// Returns owned card count per expansion
+#[server(endpoint = "get_expansion_statistics_db")]
+pub async fn get_expansion_statistics_db() -> Result<Vec<ExpansionStats>, ServerFnError> {
+    log_server_fn!("get_expansion_statistics_db");
+
+    DB.with(|db| {
+        log_db_op!(
+            "SELECT",
+            table = "expansions, card_expansions",
+            operation = "join_count"
+        );
+
+        let mut stmt = db.prepare(
+            "SELECT
+                e.id, e.name, e.abbreviation, e.cards, e.secret_cards,
+                COUNT(DISTINCT CASE WHEN c.owned = 1 THEN ce.card_id END) as owned_count
+             FROM expansions e
+             LEFT JOIN card_expansions ce ON e.id = ce.expansion_id
+             LEFT JOIN cards c ON ce.card_id = c.id
+             GROUP BY e.id
+             ORDER BY e.name",
+        )?;
+
+        let stats = stmt
+            .query_map([], |row| {
+                let expansion = Expansion {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                    abbreviation: row.get(2)?,
+                    cards: row.get(3)?,
+                    secret_cards: row.get(4)?,
+                };
+                let owned_count: usize = row.get(5)?;
+
+                Ok(ExpansionStats::new(expansion, owned_count))
+            })?
+            .collect::<Result<Vec<_>, rusqlite::Error>>()?;
+
+        Ok(stats)
+    })
+    .map_err(|e: anyhow::Error| ServerFnError::ServerError {
+        message: e.to_string(),
+        code: 500,
+        details: Some("could not fetch expansion statistics from DB".into()),
+    })
+}
+
+/// Fetch overall collection statistics
+#[server(endpoint = "get_collection_statistics_db")]
+pub async fn get_collection_statistics_db() -> Result<CollectionStats, ServerFnError> {
+    log_server_fn!("get_collection_statistics_db");
+
+    DB.with(|db| {
+        log_db_op!(
+            "SELECT",
+            table = "cards, card_expansions",
+            operation = "aggregate"
+        );
+
+        // Total unique Pokemon owned
+        let total_cards_owned: usize = db.query_row(
+            "SELECT COUNT(DISTINCT id) FROM cards WHERE owned = 1",
+            [],
+            |row| row.get(0),
+        )?;
+
+        // Total expansion cards owned (includes duplicates across expansions)
+        let total_expansion_cards: usize = db.query_row(
+            "SELECT COUNT(*) FROM card_expansions ce
+             JOIN cards c ON ce.card_id = c.id
+             WHERE c.owned = 1",
+            [],
+            |row| row.get(0),
+        )?;
+
+        // Total possible expansion cards
+        let total_possible: usize = db.query_row(
+            "SELECT SUM(cards + secret_cards) FROM expansions",
+            [],
+            |row| row.get(0),
+        )?;
+
+        let overall_completion_rate = if total_possible > 0 {
+            total_expansion_cards as f64 / total_possible as f64
+        } else {
+            0.0
+        };
+
+        Ok(CollectionStats {
+            total_cards_owned,
+            total_unique_pokemon: crate::MAX_POKEMON,
+            total_expansion_cards,
+            overall_completion_rate,
+        })
+    })
+    .map_err(|e: anyhow::Error| ServerFnError::ServerError {
+        message: e.to_string(),
+        code: 500,
+        details: Some("could not fetch collection statistics from DB".into()),
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -8,6 +8,7 @@ pub fn NavBar() -> Element {
             Link { to: Route::Collection,
                 h1 { "My Collection" }
             }
+            Link { to: Route::Statistics, class: "nav-bar__link", "Statistics" }
         }
         Outlet::<Route> {}
     }

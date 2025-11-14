@@ -8,6 +8,7 @@ mod csv_record;
 mod expansion;
 mod logging;
 mod pokeapi;
+mod statistics;
 mod utils;
 
 pub const BASE_URL: &str = "https://pokeapi.co/api/v2/pokemon/";
@@ -32,6 +33,9 @@ pub enum Route {
     #[layout(ProtectedRoute)]
     #[route("/collection")]
     Collection,
+
+    #[route("/statistics")]
+    Statistics,
 }
 
 fn main() {
