@@ -1,17 +1,17 @@
 use crate::{
-    backend::{get_all_owned_cards_db, get_card_by_id_db, get_card_by_id_remote, save_card_db},
-    card::{Card, Index, Page},
+    backend::{
+        get_all_owned_cards_db, get_card_by_id_db, get_card_by_id_remote, get_card_by_name_db,
+        get_card_by_name_remote, save_card_db,
+    },
+    card::Card,
     components::{
         BookNavigation, CardOwnershipDialog, CardViewCompact, DialogContent, DialogDescription,
         DialogMode, DialogRoot, DialogTitle, PlaceholderCard,
     },
-    CARDS_PER_PAGE,
+    CARDS_PER_DOUBLE_PAGE, MAX_POKEMON, TOTAL_PAGES,
 };
 use dioxus::prelude::*;
 use std::collections::HashMap;
-
-const MAX_POKEMON: usize = 1025;
-const TOTAL_PAGES: usize = MAX_POKEMON.div_ceil(CARDS_PER_PAGE); // 43 pages
 
 #[component]
 pub fn Collection() -> Element {
@@ -116,44 +116,90 @@ pub fn Collection() -> Element {
         }
 
         // Try parsing as ID first
-        if let Ok(id) = input.parse::<usize>() {
-            if (1..=MAX_POKEMON).contains(&id) {
-                if owned_cards.read().contains_key(&id) {
-                    // Calculate page for this card
-                    if let Ok(index) = Index::try_new(id) {
-                        let page = Page::absolut(&index).0;
-                        current_page.set(page);
+        if let Ok(index) = input.parse::<usize>() {
+            selected_index.set(Some(index));
+            loading_card.set(true);
+
+            spawn(async move {
+                // Fetch from db
+                match get_card_by_id_db(index).await {
+                    Ok(card) => {
+                        current_page.set(card.page.0);
+                        temp_card.set(card.clone());
+                        loading_card.set(false);
+                        dialog_open.set(true);
                     }
-                } else {
-                    error_message.set(format!("Pokemon #{} is not in your collection", id));
+
+                    Err(_) => {
+                        // Fetch from remote
+                        match get_card_by_id_remote(index).await {
+                            Ok(card) => {
+                                current_page.set(card.page.0);
+                                temp_card.set(card.clone());
+                                loading_card.set(false);
+                                dialog_open.set(true);
+                                if let Err(e) = save_card_db(card.clone()).await {
+                                    error_message.set(format!("Failed to save card: {}", e));
+                                    loading_card.set(false);
+                                    dialog_open.set(false);
+                                }
+                            }
+                            Err(e) => {
+                                error_message.set(format!("Failed to fetch card: {}", e));
+                                loading_card.set(false);
+                                dialog_open.set(false);
+                            }
+                        }
+                    }
                 }
-            } else {
-                error_message.set(format!("Invalid Pokemon ID: {}", id));
-            }
+            });
         } else {
-            // Search by name
-            let owned = owned_cards.read();
-            let input_lower = input.to_lowercase();
-            if let Some((id, _)) = owned.iter().find(|(_, card)| {
-                card.name_en.0.to_lowercase() == input_lower
-                    || card.name_de.0.to_lowercase() == input_lower
-            }) {
-                if let Ok(index) = Index::try_new(*id) {
-                    let page = Page::absolut(&index).0;
-                    current_page.set(page);
+            loading_card.set(true);
+
+            spawn(async move {
+                // Fetch from db
+                match get_card_by_name_db(input.clone()).await {
+                    Ok(card) => {
+                        current_page.set(card.page.0);
+                        temp_card.set(card.clone());
+                        loading_card.set(false);
+                        selected_index.set(Some(card.index.0));
+                        dialog_open.set(true);
+                    }
+
+                    Err(_) => {
+                        // Fetch from remote
+                        match get_card_by_name_remote(input).await {
+                            Ok(card) => {
+                                current_page.set(card.page.0);
+                                temp_card.set(card.clone());
+                                loading_card.set(false);
+                                selected_index.set(Some(card.index.0));
+                                dialog_open.set(true);
+                                if let Err(e) = save_card_db(card.clone()).await {
+                                    error_message.set(format!("Failed to save card: {}", e));
+                                    loading_card.set(false);
+                                    dialog_open.set(false);
+                                }
+                            }
+                            Err(e) => {
+                                error_message.set(format!("Failed to fetch card: {}", e));
+                                loading_card.set(false);
+                                dialog_open.set(false);
+                            }
+                        }
+                    }
                 }
-            } else {
-                error_message.set(format!("'{}' is not in your collection", input));
-            }
+            });
         }
     };
 
     // Calculate cards for current page
     let cards_for_page = move || {
         let page = current_page();
-        let start_index = (page - 1) * CARDS_PER_PAGE + 1;
-        let end_index = (start_index + CARDS_PER_PAGE - 1).min(MAX_POKEMON);
-        (start_index..=end_index).collect::<Vec<_>>()
+        let start = (page - 1) * CARDS_PER_DOUBLE_PAGE + 1;
+        let end = (start + CARDS_PER_DOUBLE_PAGE - 1).min(MAX_POKEMON);
+        (start..=end).collect::<Vec<_>>()
     };
 
     // Render page side (12 cards)
@@ -188,31 +234,26 @@ pub fn Collection() -> Element {
                 current_page,
                 total_pages: TOTAL_PAGES,
                 on_search: handle_search,
+                loading_card,
             }
 
             div { class: if is_mobile() { "book-view-mobile" } else { "book-view-desktop" },
-                if is_mobile() {
-                    // Single page view for mobile
-                    {render_page_side(cards_for_page())}
-                } else {
-                    // Two-page spread for desktop
-                    div { class: "book-spread",
-                        // Left page (first 12 cards)
-                        {
-                            let cards = cards_for_page();
-                            let left_cards = cards[..12.min(cards.len())].to_vec();
-                            render_page_side(left_cards)
-                        }
-                        // Right page (last 12 cards)
-                        {
-                            let cards = cards_for_page();
-                            if cards.len() > 12 {
-                                let right_cards = cards[12..].to_vec();
-                                render_page_side(right_cards)
-                            } else {
-                                rsx! {
-                                    div { class: "book-page book-page--empty" }
-                                }
+                div { class: "book-spread",
+                    // Left page (first 12 cards)
+                    {
+                        let cards = cards_for_page();
+                        let left_cards = cards[..12.min(cards.len())].to_vec();
+                        render_page_side(left_cards)
+                    }
+                    // Right page (last 12 cards)
+                    {
+                        let cards = cards_for_page();
+                        if cards.len() > 12 {
+                            let right_cards = cards[12..].to_vec();
+                            render_page_side(right_cards)
+                        } else {
+                            rsx! {
+                                div { class: "book-page book-page--empty" }
                             }
                         }
                     }
@@ -223,7 +264,7 @@ pub fn Collection() -> Element {
             CardOwnershipDialog {
                 card: temp_card,
                 dialog_open,
-                mode: if is_owned() { DialogMode::Edit } else { DialogMode::Read },
+                mode: if is_owned() { DialogMode::Edit } else { DialogMode::Add },
                 on_change: handle_ownership_change,
             }
 
