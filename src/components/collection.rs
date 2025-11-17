@@ -3,7 +3,7 @@ use crate::{
         get_all_owned_cards_db, get_card_by_id_db, get_card_by_id_remote, get_card_by_name_db,
         get_card_by_name_remote, save_card_db,
     },
-    card::Card,
+    card::{Card, Page},
     components::{
         BookNavigation, CardOwnershipDialog, CardViewCompact, DialogContent, DialogDescription,
         DialogMode, DialogRoot, DialogTitle, PlaceholderCard,
@@ -124,7 +124,7 @@ pub fn Collection() -> Element {
                 // Fetch from db
                 match get_card_by_id_db(index).await {
                     Ok(card) => {
-                        current_page.set(card.page.0);
+                        current_page.set(Page::absolut(&card.index).0);
                         temp_card.set(card.clone());
                         loading_card.set(false);
                         dialog_open.set(true);
@@ -134,7 +134,7 @@ pub fn Collection() -> Element {
                         // Fetch from remote
                         match get_card_by_id_remote(index).await {
                             Ok(card) => {
-                                current_page.set(card.page.0);
+                                current_page.set(Page::absolut(&card.index).0);
                                 temp_card.set(card.clone());
                                 loading_card.set(false);
                                 dialog_open.set(true);
@@ -160,7 +160,7 @@ pub fn Collection() -> Element {
                 // Fetch from db
                 match get_card_by_name_db(input.clone()).await {
                     Ok(card) => {
-                        current_page.set(card.page.0);
+                        current_page.set(Page::absolut(&card.index).0);
                         temp_card.set(card.clone());
                         loading_card.set(false);
                         selected_index.set(Some(card.index.0));
@@ -171,7 +171,7 @@ pub fn Collection() -> Element {
                         // Fetch from remote
                         match get_card_by_name_remote(input).await {
                             Ok(card) => {
-                                current_page.set(card.page.0);
+                                current_page.set(Page::absolut(&card.index).0);
                                 temp_card.set(card.clone());
                                 loading_card.set(false);
                                 selected_index.set(Some(card.index.0));
