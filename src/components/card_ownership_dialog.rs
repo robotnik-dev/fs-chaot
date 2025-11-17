@@ -283,14 +283,21 @@ pub fn CardOwnershipDialog(
                     // Card Info
                     div { class: "card-dialog-info",
                         div { "ID: #{card.cloned().index}" }
-                        if matches!(mode, DialogMode::Edit) {
+                        if card.cloned().owned.0 {
                             div { "Rarity: {highest_rarity.cloned()}" }
                         }
                     }
-                    if matches!(mode, DialogMode::Edit) {
-                        div { class: "expansion-manager",
-                            h3 { class: "expansion-manager-title", "Expansions" }
-
+                    div { class: "expansion-manager",
+                        h3 { class: "expansion-manager-title", "Expansions" }
+                        if card_expansions().is_empty() {
+                            div { class: "expansion-list",
+                                div { class: "expansion-item", key: "0",
+                                    div { class: "expansion-item-info",
+                                        span { class: "expansion-placeholder", "---" }
+                                    }
+                                }
+                            }
+                        } else {
                             // Current expansions list
                             div { class: "expansion-list",
                                 for (index , entry) in card_expansions().iter().enumerate() {
@@ -303,9 +310,9 @@ pub fn CardOwnershipDialog(
                                                     "{exp.abbreviation}: {exp.name}"
                                                 }
                                                 span { class: "expansion-card-num",
-                                                    " - #{entry.card_number}"
+                                                    "#{entry.card_number}"
                                                 }
-                                                span { class: "expansion-card-num", " - {entry.rarity}" }
+                                                span { class: "expansion-card-num", "{entry.rarity}" }
                                             }
                                         }
                                         button {
