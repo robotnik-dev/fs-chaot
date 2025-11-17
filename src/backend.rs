@@ -49,19 +49,115 @@ thread_local! {
                 created_at DATETIME DEFAULT (datetime('now', 'localtime')),
                 FOREIGN KEY (card_id) REFERENCES cards(id) ON DELETE CASCADE,
                 FOREIGN KEY (expansion_id) REFERENCES expansions(id) ON DELETE CASCADE,
-                UNIQUE(card_id, expansion_id)
+                UNIQUE(card_id, expansion_id, card_number)
             );
 
             CREATE INDEX IF NOT EXISTS idx_card_expansions_card_id ON card_expansions(card_id);
-            CREATE INDEX IF NOT EXISTS idx_card_expansions_expansion_id ON card_expansions(expansion_id);",
+            CREATE INDEX IF NOT EXISTS idx_card_expansions_expansion_id ON card_expansions(expansion_id);
+
+            CREATE TABLE IF NOT EXISTS migrations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL UNIQUE,
+                applied_at DATETIME DEFAULT (datetime('now', 'localtime'))
+            );",
         )
         .expect("failed to create database tables");
+
+        // Run migrations
+        run_migrations(&conn).expect("failed to run migrations");
 
         // Load expansions from SQL file if needed
         init_expansions_if_needed(&conn).expect("failed to initialize expansions");
 
         conn
     });
+}
+
+#[cfg(feature = "server")]
+fn run_migrations(conn: &rusqlite::Connection) -> Result<()> {
+    // Migration 1: Update card_expansions UNIQUE constraint to include card_number
+    let migration_name = "add_card_number_to_unique_constraint";
+
+    // Check if migration has already been applied
+    let already_applied: bool = conn
+        .query_row(
+            "SELECT COUNT(*) FROM migrations WHERE name = ?",
+            [migration_name],
+            |row| {
+                let count: i64 = row.get(0)?;
+                Ok(count > 0)
+            },
+        )
+        .unwrap_or(false);
+
+    if !already_applied {
+        tracing::info!(migration = migration_name, "Running migration");
+
+        // Check if the old constraint exists by trying to insert a duplicate
+        // If it fails with UNIQUE constraint, we need to migrate
+        let needs_migration = conn
+            .prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='card_expansions'")
+            .and_then(|mut stmt| {
+                stmt.query_row([], |row| {
+                    let sql: String = row.get(0)?;
+                    // Check if the old constraint format exists
+                    Ok(sql.contains("UNIQUE(card_id, expansion_id)")
+                        && !sql.contains("UNIQUE(card_id, expansion_id, card_number)"))
+                })
+            })
+            .unwrap_or(false);
+
+        if needs_migration {
+            tracing::info!("Migrating card_expansions table to new UNIQUE constraint");
+
+            // SQLite doesn't support ALTER TABLE to modify constraints,
+            // so we need to recreate the table
+            conn.execute_batch(
+                "BEGIN TRANSACTION;
+
+                -- Create new table with updated constraint
+                CREATE TABLE card_expansions_new (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    card_id INTEGER NOT NULL,
+                    expansion_id INTEGER NOT NULL,
+                    card_number TEXT NOT NULL,
+                    rarity TEXT NOT NULL,
+                    created_at DATETIME DEFAULT (datetime('now', 'localtime')),
+                    FOREIGN KEY (card_id) REFERENCES cards(id) ON DELETE CASCADE,
+                    FOREIGN KEY (expansion_id) REFERENCES expansions(id) ON DELETE CASCADE,
+                    UNIQUE(card_id, expansion_id, card_number)
+                );
+
+                -- Copy data from old table to new table
+                INSERT INTO card_expansions_new (id, card_id, expansion_id, card_number, rarity, created_at)
+                SELECT id, card_id, expansion_id, card_number, rarity, created_at
+                FROM card_expansions;
+
+                -- Drop old table
+                DROP TABLE card_expansions;
+
+                -- Rename new table to original name
+                ALTER TABLE card_expansions_new RENAME TO card_expansions;
+
+                -- Recreate indexes
+                CREATE INDEX idx_card_expansions_card_id ON card_expansions(card_id);
+                CREATE INDEX idx_card_expansions_expansion_id ON card_expansions(expansion_id);
+
+                COMMIT;"
+            )?;
+
+            tracing::info!("Migration completed successfully");
+        } else {
+            tracing::info!("Migration not needed - schema already up to date");
+        }
+
+        // Mark migration as applied
+        conn.execute("INSERT INTO migrations (name) VALUES (?)", [migration_name])?;
+    } else {
+        tracing::debug!(migration = migration_name, "Migration already applied");
+    }
+
+    Ok(())
 }
 
 #[cfg(feature = "server")]

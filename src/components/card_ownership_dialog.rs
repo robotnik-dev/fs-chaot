@@ -107,12 +107,10 @@ pub fn CardOwnershipDialog(
             if !new_card_number().trim().is_empty() {
                 let mut expansions = card_expansions.read().clone();
 
-                // Check for duplicates
-                if let Some((index, _)) = expansions
-                    .iter()
-                    .enumerate()
-                    .find(|(_, ex)| ex.expansion_id == exp_id)
-                {
+                // Check for duplicates and swap it (only when card number is NOT the same)
+                if let Some((index, _)) = expansions.iter().enumerate().find(|(_, ex)| {
+                    ex.expansion_id == exp_id && ex.card_number == new_card_number()
+                }) {
                     let ex = expansions.swap_remove(index);
                     let entry = ExpansionEntry {
                         card_number: new_card_number(),
