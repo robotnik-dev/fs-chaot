@@ -537,15 +537,13 @@
 }
 
 .card-compact:hover {
-  transform: translateY(-4px) scale(1.02);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  transform: translateY(-4px) scale(1.08);
   z-index: 1;
 }
 
 /* Owned Card */
 .card-compact--owned {
   border: 3px solid #4caf50;
-  /* background: #fafafa; */
 }
 
 /* Placeholder Card */
@@ -574,18 +572,33 @@
 }
 
 .card-compact--rarity-holo-rare {
-  border-color: purple;
-  box-shadow: 0 0 10px pink;
+  border-color: blue;
+  box-shadow: 0 0 30px inset white;
+}
+
+.card-compact--rarity-reverse-holo-rare {
+  border-color: blue;
+  box-shadow: 0 0 24px white;
+}
+
+.card-compact--rarity-double-rare {
+  border-color: darkmagenta;
+  box-shadow: 0 0 30px inset darkmagenta;
 }
 
 .card-compact--rarity-ultra-rare {
-  border-color: red;
-  box-shadow: 0 0 16px white;
+  border-color: peru;
+  box-shadow: 0 0 30px inset yellow;
 }
 
 .card-compact--rarity-secret-rare {
-  border-color: red;
-  box-shadow: 0 0 20px yellow;
+  border-color: crimson;
+  box-shadow: 0 0 30px inset crimson;
+}
+
+.card-compact--rarity-promo {
+  border-color: white;
+  box-shadow: 0 0 30px inset yellowgreen;
 }
 
 /* Card Compact Elements */

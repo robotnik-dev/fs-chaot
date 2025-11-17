@@ -360,9 +360,9 @@ pub fn CardOwnershipDialog(
                                 class: "rarity-dropdown",
                                 value: new_rarity().to_string(),
                                 onchange: move |evt| {
-                                    if let Ok(rarity) = evt.value().parse::<Rarity>() {
-                                        new_rarity.set(rarity);
-                                    }
+                                    let Ok(rarity_str) = evt.value().parse::<String>();
+                                    new_rarity.set(Rarity::from(rarity_str.as_str()));
+
                                 },
                                 option { value: "", "Select rarity..." }
                                 for rarity in all_rarities().iter() {

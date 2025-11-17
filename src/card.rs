@@ -7,10 +7,7 @@ use rusqlite::{
     types::{FromSql, FromSqlResult, ToSqlOutput},
     ToSql,
 };
-use std::{
-    fmt::{Display, Error},
-    str::FromStr,
-};
+use std::fmt::Display;
 use strum::EnumIter;
 
 #[derive(Default, Debug, Clone, serde::Deserialize, serde::Serialize, PartialEq)]
@@ -88,8 +85,11 @@ pub enum Rarity {
     Uncommon,
     Rare,
     HoloRare,
+    ReverseHoloRare,
+    DoubleRare,
     UltraRare,
     SecretRare,
+    Promo,
 }
 
 impl Display for Rarity {
@@ -99,26 +99,32 @@ impl Display for Rarity {
             Self::Uncommon => f.write_str("Uncommon ♦"),
             Self::Rare => f.write_str("Rare ★"),
             Self::HoloRare => f.write_str("Holo Rare ★H"),
+            Self::ReverseHoloRare => f.write_str("Reverse Holo Rare ★H"),
+            Self::DoubleRare => f.write_str("Double Rare ★★"),
             Self::UltraRare => f.write_str("Ultra Rare"),
             Self::SecretRare => f.write_str("Secret Rare"),
+            Self::Promo => f.write_str("Promo"),
         }
     }
 }
 
-impl FromStr for Rarity {
-    type Err = Error;
-    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        match s {
-            "Common ●" => Ok(Self::Common),
-            "Uncommon ♦" => Ok(Self::Uncommon),
-            "Rare ★" => Ok(Self::Rare),
-            "Holo Rare ★H" => Ok(Self::HoloRare),
-            "Ultra Rare" => Ok(Self::UltraRare),
-            "Secret Rare" => Ok(Self::SecretRare),
-            _ => Ok(Self::Common),
-        }
-    }
-}
+// impl FromStr for Rarity {
+//     type Err = Error;
+//     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+//         match s {
+//             "Common ●" => Ok(Self::Common),
+//             "Uncommon ♦" => Ok(Self::Uncommon),
+//             "Rare ★" => Ok(Self::Rare),
+//             "Holo Rare ★H" => Ok(Self::HoloRare),
+//             "Reverse Holo Rare ★H" => Ok(Self::ReverseHoloRare),
+//             "Double Rare ★★" => Ok(Self::DoubleRare),
+//             "Ultra Rare" => Ok(Self::UltraRare),
+//             "Secret Rare" => Ok(Self::SecretRare),
+//             "Promo" => Ok(Self::Promo),
+//             _ => Ok(Self::Common),
+//         }
+//     }
+// }
 
 #[cfg(feature = "server")]
 impl ToSql for Rarity {
@@ -143,11 +149,12 @@ impl From<&str> for Rarity {
             "Uncommon ♦" => Self::Uncommon,
             "Rare ★" => Self::Rare,
             "Holo Rare ★H" => Self::HoloRare,
+            "Reverse Holo Rare ★H" => Self::ReverseHoloRare,
+            "Double Rare ★★" => Self::DoubleRare,
             "Ultra Rare" => Self::UltraRare,
             "Secret Rare" => Self::SecretRare,
-            _ => {
-                panic!("This should never be reached ..")
-            }
+            "Promo" => Self::Promo,
+            _ => Self::Common,
         }
     }
 }
