@@ -29,14 +29,31 @@ pub fn BarChart(mut entries: Vec<BarChartEntry>, metadata: StatisticMetadata) ->
                             class: "bar-chart__bar",
                             style: "width: {entry.value}%",
                         }
+                        {
+                            if let (Some(secret_cards), Some(secret_cards_percentage)) = (
+                                entry.metadata.get("secret_cards"),
+                                entry.metadata.get("secret_cards_percentage"),
+                            ) {
+                                let secret_cards = secret_cards.parse::<usize>().unwrap_or_default();
+                                rsx! {
+                                    div {
+                                        class: "bar-chart__marker",
+                                        style: if secret_cards == 0 { format!("left: 101%") } else { format!("left: {}%", secret_cards_percentage) },
+                                    }
+                                }
+                            } else {
+                                rsx! {}
+                            }
+                        }
                     }
                     span { class: "bar-chart__value",
                         {
-                            if let (Some(owned), Some(total)) = (
+                            if let (Some(owned), Some(total), Some(secret_cards)) = (
                                 entry.metadata.get("owned"),
                                 entry.metadata.get("total"),
+                                entry.metadata.get("secret_cards"),
                             ) {
-                                format!("{}/{} ({:.1}%)", owned, total, entry.value)
+                                format!("{}/{}(s*{})({:.1}%)", owned, total, secret_cards, entry.value)
                             } else {
                                 format!("{:.1}%", entry.value)
                             }

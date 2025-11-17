@@ -1233,6 +1233,16 @@
   font-family: monospace;
 }
 
+.bar-chart__marker {
+  position: absolute;
+  left: 60%;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background-color: blue;
+  pointer-events: none;
+}
+
 /* Scalar Display Styles */
 .scalar-display {
   text-align: center;
