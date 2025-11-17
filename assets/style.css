@@ -958,6 +958,28 @@
   transition: background 0.2s;
 }
 
+.btn-close-expansion-form {
+  padding: 0.6rem;
+  background: var(--btn-danger-bg, #f44336);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-open-expansion-form {
+  padding: 0.6rem;
+  background: var(--btn-secondary-bg, #4caf50);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
 .btn-add-expansion:hover {
   background: var(--btn-secondary-hover, #45a049);
 }
@@ -995,6 +1017,12 @@
 
 .card-dialog-actions button {
   flex: 1;
+}
+
+.card-expansion-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
 }
 
 /* Clickable Card Hover Effect */

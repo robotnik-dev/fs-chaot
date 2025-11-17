@@ -39,6 +39,7 @@ pub fn CardOwnershipDialog(
     let mut is_submitting = use_signal(|| false);
     let mut card_expansions = use_signal(Vec::<ExpansionEntry>::new);
     let mut highest_rarity = use_signal(Rarity::default);
+    let mut expansion_form_open = use_signal(|| false);
 
     // New expansion form state
     let mut new_expansion_id = use_signal(|| None::<usize>);
@@ -209,6 +210,7 @@ pub fn CardOwnershipDialog(
             // Success
             is_submitting.set(false);
             dialog_open.set(false);
+            expansion_form_open.set(false);
             on_change.call(card.cloned());
         });
     };
@@ -240,6 +242,7 @@ pub fn CardOwnershipDialog(
             // Success
             is_submitting.set(false);
             dialog_open.set(false);
+            expansion_form_open.set(false);
             on_change.call(card.cloned());
         });
     };
@@ -253,6 +256,7 @@ pub fn CardOwnershipDialog(
                 new_expansion_id.set(None);
                 new_card_number.set(String::new());
                 error_message.set(String::new());
+                expansion_form_open.set(false);
             },
             DialogContent {
                 button {
@@ -326,52 +330,66 @@ pub fn CardOwnershipDialog(
                     }
 
                     // Add new expansion form
-                    div { class: "expansion-selector",
-                        h4 { "Add Expansion" }
-
-                        select {
-                            class: "expansion-dropdown",
-                            value: new_expansion_id().map(|id| id.to_string()).unwrap_or_default(),
-                            onchange: move |evt| {
-                                if let Ok(id) = evt.value().parse::<usize>() {
-                                    new_expansion_id.set(Some(id));
-                                } else {
-                                    new_expansion_id.set(None);
+                    if expansion_form_open() {
+                        div { class: "expansion-selector",
+                            select {
+                                class: "expansion-dropdown",
+                                value: new_expansion_id().map(|id| id.to_string()).unwrap_or_default(),
+                                onchange: move |evt| {
+                                    if let Ok(id) = evt.value().parse::<usize>() {
+                                        new_expansion_id.set(Some(id));
+                                    } else {
+                                        new_expansion_id.set(None);
+                                    }
+                                },
+                                option { value: "", "Select expansion..." }
+                                for exp in all_expansions().iter() {
+                                    option { value: "{exp.id}", "{exp.abbreviation}: {exp.name}" }
                                 }
-                            },
-                            option { value: "", "Select expansion..." }
-                            for exp in all_expansions().iter() {
-                                option { value: "{exp.id}", "{exp.abbreviation}: {exp.name}" }
+                            }
+
+                            input {
+                                class: "card-number-input",
+                                r#type: "text",
+                                placeholder: "Card number",
+                                value: "{new_card_number()}",
+                                oninput: move |evt| new_card_number.set(evt.value()),
+                            }
+
+                            select {
+                                class: "rarity-dropdown",
+                                value: new_rarity().to_string(),
+                                onchange: move |evt| {
+                                    if let Ok(rarity) = evt.value().parse::<Rarity>() {
+                                        new_rarity.set(rarity);
+                                    }
+                                },
+                                option { value: "", "Select rarity..." }
+                                for rarity in all_rarities().iter() {
+                                    option { value: "{rarity}", "{rarity}" }
+                                }
+                            }
+                            div { class: "card-expansion-actions",
+                                button {
+                                    class: "btn-add-expansion",
+                                    r#type: "button",
+                                    onclick: add_expansion,
+                                    "+ Add Expansion"
+                                }
+                                button {
+                                    class: "btn-close-expansion-form",
+                                    r#type: "button",
+                                    onclick: move |_| expansion_form_open.set(false),
+                                    "Close"
+                                }
                             }
                         }
-
-                        input {
-                            class: "card-number-input",
-                            r#type: "text",
-                            placeholder: "Card number",
-                            value: "{new_card_number()}",
-                            oninput: move |evt| new_card_number.set(evt.value()),
-                        }
-
-                        select {
-                            class: "rarity-dropdown",
-                            value: new_rarity().to_string(),
-                            onchange: move |evt| {
-                                if let Ok(rarity) = evt.value().parse::<Rarity>() {
-                                    new_rarity.set(rarity);
-                                }
-                            },
-                            option { value: "", "Select rarity..." }
-                            for rarity in all_rarities().iter() {
-                                option { value: "{rarity}", "{rarity}" }
-                            }
-                        }
-
+                    } else {
                         button {
-                            class: "btn-add-expansion",
+                            class: "btn-open-expansion-form",
                             r#type: "button",
-                            onclick: add_expansion,
-                            "+ Add Expansion"
+                            onclick: move |_| expansion_form_open.set(true),
+                            "Add Expansion"
                         }
                     }
 
