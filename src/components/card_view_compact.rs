@@ -15,8 +15,11 @@ pub fn CardViewCompact(card: Card, onclick: EventHandler<usize>) -> Element {
                 Rarity::Uncommon => "card-compact--rarity-uncommon",
                 Rarity::Rare => "card-compact--rarity-rare",
                 Rarity::HoloRare => "card-compact--rarity-holo-rare",
+                Rarity::ReverseHoloRare => "card-compact--rarity-reverse-holo-rare",
+                Rarity::DoubleRare => "card-compact--rarity-double-rare",
                 Rarity::UltraRare => "card-compact--rarity-ultra-rare",
                 Rarity::SecretRare => "card-compact--rarity-secret-rare",
+                Rarity::Promo => "card-compact--rarity-promo",
             };
             rarity_class.set(class.to_string());
         });

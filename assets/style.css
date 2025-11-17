@@ -119,10 +119,10 @@
   font-size: 1rem;
 }
 
-@media (width >= 40rem) {
+@media (width >= 45rem) {
   .dialog {
-    max-width: 32rem;
-    text-align: left;
+    max-width: 45rem;
+    text-align: center;
   }
 }
 
@@ -537,15 +537,13 @@
 }
 
 .card-compact:hover {
-  transform: translateY(-4px) scale(1.02);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  transform: translateY(-4px) scale(1.08);
   z-index: 1;
 }
 
 /* Owned Card */
 .card-compact--owned {
   border: 3px solid #4caf50;
-  /* background: #fafafa; */
 }
 
 /* Placeholder Card */
@@ -574,18 +572,33 @@
 }
 
 .card-compact--rarity-holo-rare {
-  border-color: purple;
-  box-shadow: 0 0 10px pink;
+  border-color: blue;
+  box-shadow: 0 0 30px inset white;
+}
+
+.card-compact--rarity-reverse-holo-rare {
+  border-color: blue;
+  box-shadow: 0 0 24px white;
+}
+
+.card-compact--rarity-double-rare {
+  border-color: darkmagenta;
+  box-shadow: 0 0 30px inset darkmagenta;
 }
 
 .card-compact--rarity-ultra-rare {
-  border-color: red;
-  box-shadow: 0 0 16px white;
+  border-color: peru;
+  box-shadow: 0 0 30px inset yellow;
 }
 
 .card-compact--rarity-secret-rare {
-  border-color: red;
-  box-shadow: 0 0 20px yellow;
+  border-color: crimson;
+  box-shadow: 0 0 30px inset crimson;
+}
+
+.card-compact--rarity-promo {
+  border-color: white;
+  box-shadow: 0 0 30px inset yellowgreen;
 }
 
 /* Card Compact Elements */
@@ -664,7 +677,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
+  gap: 6px;
   padding: 20px;
 }
 
@@ -854,6 +867,7 @@
   margin-top: 1.5rem;
   padding-top: 1.5rem;
   border-top: 1px solid var(--border-color, #ddd);
+  width: 100%;
 }
 
 .expansion-manager-title {
@@ -861,6 +875,7 @@
   font-weight: 600;
   margin-bottom: 1rem;
   color: var(--text-color, #333);
+  text-align: center;
 }
 
 .expansion-list {
@@ -892,11 +907,17 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  justify-content: space-evenly;
 }
 
 .expansion-name {
   font-weight: 500;
   color: var(--text-color, #333);
+}
+
+.expansion-placeholder {
+  font-weight: 500;
+  color: var(--text-color, gray);
 }
 
 .expansion-card-num {
@@ -950,6 +971,28 @@
   transition: background 0.2s;
 }
 
+.btn-close-expansion-form {
+  padding: 0.6rem;
+  background: var(--btn-danger-bg, #f44336);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-open-expansion-form {
+  padding: 0.6rem;
+  background: var(--btn-secondary-bg, #4caf50);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
 .btn-add-expansion:hover {
   background: var(--btn-secondary-hover, #45a049);
 }
@@ -987,6 +1030,12 @@
 
 .card-dialog-actions button {
   flex: 1;
+}
+
+.card-expansion-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
 }
 
 /* Clickable Card Hover Effect */
@@ -1216,7 +1265,6 @@
   background: tomato;
   border-radius: 6px;
   transition: width 300ms ease;
-  min-width: 2%;
 }
 
 .bar-chart__value {
@@ -1224,6 +1272,16 @@
   color: var(--secondary-color-6);
   text-align: right;
   font-family: monospace;
+}
+
+.bar-chart__marker {
+  position: absolute;
+  left: 60%;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background-color: blue;
+  pointer-events: none;
 }
 
 /* Scalar Display Styles */

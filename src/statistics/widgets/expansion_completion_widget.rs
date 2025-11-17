@@ -32,6 +32,17 @@ impl StatWidget for ExpansionCompletionWidget {
                     metadata.insert("owned".to_string(), stat.owned_count.to_string());
                     metadata.insert("total".to_string(), stat.total_count.to_string());
                     metadata.insert(
+                        "secret_cards_percentage".to_string(),
+                        (((stat.total_count as f32 - stat.expansion.secret_cards as f32)
+                            / stat.total_count as f32
+                            * 100.0) as usize)
+                            .to_string(),
+                    );
+                    metadata.insert(
+                        "secret_cards".to_string(),
+                        stat.expansion.secret_cards.to_string(),
+                    );
+                    metadata.insert(
                         "abbreviation".to_string(),
                         stat.expansion.abbreviation.clone(),
                     );
@@ -60,6 +71,17 @@ impl StatWidget for ExpansionCompletionWidget {
                     metadata.insert("expansion_id".to_string(), stat.expansion.id.to_string());
                     metadata.insert("owned".to_string(), stat.owned_count.to_string());
                     metadata.insert("total".to_string(), stat.total_count.to_string());
+                    metadata.insert(
+                        "secret_cards_percentage".to_string(),
+                        (((stat.total_count as f32 - stat.expansion.secret_cards as f32)
+                            / stat.total_count as f32
+                            * 100.0) as usize)
+                            .to_string(),
+                    );
+                    metadata.insert(
+                        "secret_cards".to_string(),
+                        stat.expansion.secret_cards.to_string(),
+                    );
                     metadata.insert(
                         "abbreviation".to_string(),
                         stat.expansion.abbreviation.clone(),
