@@ -1224,7 +1224,6 @@
   background: tomato;
   border-radius: 6px;
   transition: width 300ms ease;
-  min-width: 2%;
 }
 
 .bar-chart__value {
