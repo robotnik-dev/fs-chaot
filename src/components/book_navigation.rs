@@ -1,3 +1,4 @@
+use crate::card::Page;
 use dioxus::prelude::*;
 
 #[component]
@@ -47,7 +48,7 @@ pub fn BookNavigation(
                     }
                 },
                 {(1..=total_pages).map(|p| rsx! {
-                    option { value: "{p}", "Page {p}" }
+                    option { value: "{p}", "Page {p} ({Page::relative_from_absolute(Page(p)).0})" }
                 })}
             }
             button {
