@@ -3,13 +3,7 @@ use dioxus::prelude::*;
 
 #[component]
 pub fn BarChart(mut entries: Vec<BarChartEntry>, metadata: StatisticMetadata) -> Element {
-    entries.sort_by_key(|entry| {
-        entry
-            .metadata
-            .get("owned")
-            .unwrap_or(&"0".to_string())
-            .clone()
-    });
+    entries.sort_by_key(|entry| entry.value as usize);
     entries.reverse();
     rsx! {
         div { class: "bar-chart",
