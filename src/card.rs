@@ -282,6 +282,16 @@ impl FromSql for Page {
 }
 
 impl Page {
+    pub fn relative_from_absolute(absolute: Self) -> Self {
+        let pages = CARDS_PER_BOOK / CARDS_PER_DOUBLE_PAGE;
+        let remainder = absolute.0 % pages;
+        if remainder == 0 {
+            Self(CARDS_PER_DOUBLE_PAGE)
+        } else {
+            Self(remainder)
+        }
+    }
+
     /// Calculates the absolut page number counting from 0
     pub fn absolut(index: &Index) -> Self {
         Self((index.0 as f32 / CARDS_PER_DOUBLE_PAGE as f32).ceil() as usize)
