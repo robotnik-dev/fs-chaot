@@ -151,10 +151,79 @@ fn run_migrations(conn: &rusqlite::Connection) -> Result<()> {
             tracing::info!("Migration not needed - schema already up to date");
         }
 
-        // Mark migration as applied
-        conn.execute("INSERT INTO migrations (name) VALUES (?)", [migration_name])?;
+        // Mark migration as applied (OR IGNORE handles concurrent execution)
+        conn.execute(
+            "INSERT OR IGNORE INTO migrations (name) VALUES (?)",
+            [migration_name],
+        )?;
     } else {
         tracing::debug!(migration = migration_name, "Migration already applied");
+    }
+
+    // Migration 2: Update expansion data (abbreviations, card counts, etc.)
+    let migration_name_2 = "update_expansion_data";
+
+    let already_applied_2: bool = conn
+        .query_row(
+            "SELECT COUNT(*) FROM migrations WHERE name = ?",
+            [migration_name_2],
+            |row| {
+                let count: i64 = row.get(0)?;
+                Ok(count > 0)
+            },
+        )
+        .unwrap_or(false);
+
+    if !already_applied_2 {
+        tracing::info!(migration = migration_name_2, "Running migration");
+
+        conn.execute_batch(
+            "BEGIN TRANSACTION;
+
+            -- Base Series (1999-2000)
+            UPDATE expansions SET abbreviation = 'JU', cards = 64, secret_cards = 0 WHERE name = 'Jungle';
+            UPDATE expansions SET abbreviation = 'FO', cards = 62, secret_cards = 0 WHERE name = 'Fossil';
+            UPDATE expansions SET abbreviation = 'B2', cards = 130, secret_cards = 0 WHERE name = 'Base Set 2';
+            UPDATE expansions SET abbreviation = 'G1', cards = 132, secret_cards = 0 WHERE name = 'Gym Heroes';
+            UPDATE expansions SET abbreviation = 'G2', cards = 132, secret_cards = 0 WHERE name = 'Gym Challenge';
+
+            -- Neo Series (2000-2002)
+            UPDATE expansions SET abbreviation = 'N1', cards = 111, secret_cards = 0 WHERE name = 'Neo Genesis';
+            UPDATE expansions SET abbreviation = 'N2', cards = 75, secret_cards = 0 WHERE name = 'Neo Discovery';
+            UPDATE expansions SET abbreviation = 'N3', cards = 64, secret_cards = 2 WHERE name = 'Neo Revelation';
+            UPDATE expansions SET abbreviation = 'N4', cards = 105, secret_cards = 8 WHERE name = 'Neo Destiny';
+
+            -- EX Series (2003-2007)
+            UPDATE expansions SET abbreviation = 'RG', cards = 112, secret_cards = 4 WHERE name = 'EX FireRed & LeafGreen';
+
+            -- HeartGold & SoulSilver Series (2010-2011)
+            UPDATE expansions SET abbreviation = 'HS', cards = 123, secret_cards = 0 WHERE name = 'HeartGold & SoulSilver';
+
+            -- Sun & Moon Series (2017-2019)
+            UPDATE expansions SET abbreviation = 'SUM', cards = 149, secret_cards = 14 WHERE name = 'Sun & Moon';
+
+            -- Scarlet & Violet Series (2023-2025)
+            UPDATE expansions SET abbreviation = 'JTG', cards = 159, secret_cards = 31 WHERE name = 'Journey Together';
+            UPDATE expansions SET abbreviation = 'DRI', cards = 182, secret_cards = 62 WHERE name = 'Destined Rivals';
+            UPDATE expansions SET abbreviation = 'BLK', cards = 86, secret_cards = 86 WHERE name = 'Black Bolt';
+            UPDATE expansions SET abbreviation = 'WHF', cards = 86, secret_cards = 87 WHERE name = 'White Flare';
+
+            -- Mega Evolution Series (2025-)
+            UPDATE expansions SET abbreviation = 'MEG', cards = 132, secret_cards = 56 WHERE name = 'Mega Evolution';
+            UPDATE expansions SET abbreviation = 'PFL', cards = 94, secret_cards = 36 WHERE name = 'Phantasmal Flames';
+
+            COMMIT;",
+        )?;
+
+        tracing::info!("Expansion data migration completed successfully");
+
+        // Mark migration as applied (OR IGNORE handles concurrent execution)
+        conn.execute(
+            "INSERT OR IGNORE INTO migrations (name) VALUES (?)",
+            [migration_name_2],
+        )?;
+    } else {
+        tracing::debug!(migration = migration_name_2, "Migration already applied");
     }
 
     Ok(())
