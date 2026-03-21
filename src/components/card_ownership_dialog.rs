@@ -44,7 +44,6 @@ pub fn CardOwnershipDialog(
     // New expansion form state
     let mut new_expansion_id = use_signal(|| None::<usize>);
     let mut new_card_number = use_signal(String::new);
-    let mut new_rarity = use_signal(|| Rarity::Common);
 
     // Load all rarities on mount
     use_effect(move || {
@@ -102,76 +101,14 @@ pub fn CardOwnershipDialog(
         }
     });
 
-    // Add expansion to list
-    let add_expansion = move |_| {
-        if let Some(exp_id) = new_expansion_id() {
-            if !new_card_number().trim().is_empty() {
-                let mut expansions = card_expansions.read().clone();
-
-                // Check for duplicates and swap it (only when card number is NOT the same)
-                if let Some((index, _)) = expansions.iter().enumerate().find(|(_, ex)| {
-                    ex.expansion_id == exp_id && ex.card_number == new_card_number()
-                }) {
-                    let ex = expansions.swap_remove(index);
-                    let entry = ExpansionEntry {
-                        card_number: new_card_number(),
-                        rarity: new_rarity(),
-                        ..ex
-                    };
-                    expansions.push(entry);
-                } else {
-                    // push new expansion
-                    expansions.push(ExpansionEntry {
-                        id: None,
-                        expansion_id: exp_id,
-                        card_number: new_card_number(),
-                        rarity: new_rarity(),
-                    });
-                }
-
-                card_expansions.set(expansions);
-
-                // Reset form
-                new_expansion_id.set(None);
-                new_card_number.set(String::new());
-                error_message.set(String::new());
-            } else {
-                error_message.set("Card number is required".to_string());
-            }
-        } else {
-            error_message.set("Please select an expansion".to_string());
-        }
-    };
-
-    // Remove expansion from list
-    let mut remove_expansion = move |index: usize| {
-        let mut expansions = card_expansions.read().clone();
-
-        // Prevent removing the last expansion
-        if expansions.len() <= 1 {
-            error_message.set("At least one expansion is required".to_string());
-            return;
-        }
-
-        if index < expansions.len() {
-            expansions.remove(index);
-            card_expansions.set(expansions);
-            error_message.set(String::new());
-        }
-    };
-
     // Handle add to collection
     let handle_add_to_collection = move |_| {
-        if card_expansions().is_empty() {
-            error_message.set("At least one expansion is required".to_string());
-            return;
-        }
-
         is_submitting.set(true);
         card.write().owned = Bool(true);
         let card_clone = card.read().clone();
 
-        let expansions_clone = card_expansions();
+        // just add default one to database
+        let expansions_clone = [ExpansionEntry::default()];
 
         spawn(async move {
             // Save or update card
@@ -206,13 +143,11 @@ pub fn CardOwnershipDialog(
                     return;
                 }
             }
-
-            // Success
-            is_submitting.set(false);
-            dialog_open.set(false);
-            expansion_form_open.set(false);
-            on_change.call(card.cloned());
         });
+        is_submitting.set(false);
+        dialog_open.set(false);
+        expansion_form_open.set(false);
+        on_change.call(card.cloned());
     };
 
     // Handle remove from collection
@@ -289,152 +224,28 @@ pub fn CardOwnershipDialog(
                             div { "Rarity: {highest_rarity.cloned()}" }
                         }
                     }
-                    div { class: "expansion-manager",
-                        h3 { class: "expansion-manager-title", "Expansions" }
-                        if card_expansions().is_empty() {
-                            div { class: "expansion-list",
-                                div { class: "expansion-item", key: "0",
-                                    div { class: "expansion-item-info",
-                                        span { class: "expansion-placeholder", "---" }
-                                    }
-                                }
-                            }
-                        } else {
-                            // Current expansions list
-                            div { class: "expansion-list",
-                                for (index , entry) in card_expansions().iter().enumerate() {
-                                    div {
-                                        class: "expansion-item",
-                                        key: "{index}",
-                                        div { class: "expansion-item-info",
-                                            if let Some(exp) = all_expansions().iter().find(|e| e.id == entry.expansion_id) {
-                                                span { class: "expansion-name",
-                                                    "{exp.abbreviation}: {exp.name}"
-                                                }
-                                                span { class: "expansion-card-num",
-                                                    "#{entry.card_number}"
-                                                }
-                                                span { class: "expansion-card-num", "{entry.rarity}" }
-                                            }
-                                        }
-                                        button {
-                                            class: "btn-delete-expansion",
-                                            r#type: "button",
-                                            onclick: move |_| remove_expansion(index),
-                                            "Remove"
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
 
-                    // Add new expansion form
-                    if expansion_form_open() {
-                        div { class: "expansion-selector",
-                            select {
-                                class: "expansion-dropdown",
-                                value: new_expansion_id().map(|id| id.to_string()).unwrap_or_default(),
-                                onchange: move |evt| {
-                                    if let Ok(id) = evt.value().parse::<usize>() {
-                                        new_expansion_id.set(Some(id));
-                                    } else {
-                                        new_expansion_id.set(None);
-                                    }
-                                },
-                                option { value: "", "Select expansion..." }
-                                for exp in all_expansions().iter() {
-                                    option { value: "{exp.id}", "{exp.abbreviation}: {exp.name}" }
-                                }
-                            }
-
-                            input {
-                                class: "card-number-input",
-                                r#type: "text",
-                                placeholder: "Card number",
-                                value: "{new_card_number()}",
-                                oninput: move |evt| new_card_number.set(evt.value()),
-                            }
-
-                            select {
-                                class: "rarity-dropdown",
-                                value: new_rarity().to_string(),
-                                onchange: move |evt| {
-                                    let Ok(rarity_str) = evt.value().parse::<String>();
-                                    new_rarity.set(Rarity::from(rarity_str.as_str()));
-
-                                },
-                                option { value: "", "Select rarity..." }
-                                for rarity in all_rarities().iter() {
-                                    option { value: "{rarity}", "{rarity}" }
-                                }
-                            }
-                            div { class: "card-expansion-actions",
-                                button {
-                                    class: "btn-add-expansion",
-                                    r#type: "button",
-                                    onclick: add_expansion,
-                                    "+ Add Expansion"
-                                }
-                                button {
-                                    class: "btn-close-expansion-form",
-                                    r#type: "button",
-                                    onclick: move |_| expansion_form_open.set(false),
-                                    "Close"
-                                }
-                            }
-                        }
-                    } else {
+                    if matches!(mode, DialogMode::Add) {
                         button {
-                            class: "btn-open-expansion-form",
-                            r#type: "button",
-                            onclick: move |_| expansion_form_open.set(true),
-                            "Add Expansion"
-                        }
-                    }
-
-                    // Error message
-                    if !error_message().is_empty() {
-                        div { class: "expansion-error", "{error_message()}" }
-                    }
-
-                    // Action buttons
-                    div { class: "card-dialog-actions",
-                        // Add to Collection button
-                        if matches!(mode, DialogMode::Add) {
-                            button {
-                                class: "btn-add",
-                                disabled: is_submitting(),
-                                onclick: handle_add_to_collection,
-                                if is_submitting() {
-                                    "Adding..."
-                                } else {
-                                    "Add to Collection"
-                                }
+                            class: "btn-add",
+                            disabled: is_submitting(),
+                            onclick: handle_add_to_collection,
+                            if is_submitting() {
+                                "Saving..."
+                            } else {
+                                "Add"
                             }
                         }
-
-                        // Save Changes and Remove from Collection button
-                        if matches!(mode, DialogMode::Edit) {
-                            button {
-                                class: "btn-add",
-                                disabled: is_submitting() || card_expansions().is_empty(),
-                                onclick: handle_add_to_collection,
-                                if is_submitting() {
-                                    "Saving..."
-                                } else {
-                                    "Save Changes"
-                                }
-                            }
-                            button {
-                                class: "btn-remove",
-                                disabled: is_submitting(),
-                                onclick: handle_remove_from_collection,
-                                if is_submitting() {
-                                    "Removing..."
-                                } else {
-                                    "Remove from Collection"
-                                }
+                    }
+                    if matches!(mode, DialogMode::Edit) {
+                        button {
+                            class: "btn-remove",
+                            disabled: is_submitting(),
+                            onclick: handle_remove_from_collection,
+                            if is_submitting() {
+                                "Removing..."
+                            } else {
+                                "Remove"
                             }
                         }
                     }
